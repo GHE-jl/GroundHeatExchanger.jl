@@ -5,8 +5,8 @@ Script testing the models from GHEModels.jl.
 using BenchmarkTools
 using Plots
 
-includet("../src/GroundTSimulations.jl")
-using .GroundTSimulations
+includet("../src/GHEModels.jl")
+using .GHEModels
 
 # Paremeters
 #t = collect(range(3600., 3600*24*365*100, step=3600))                          # Time range (lin)
@@ -40,8 +40,8 @@ xy = [0., 0.]
 @time g_fls = fls(t, ks, Cs, rb, H, D)
 @time g_mfls = mfls(t, ks, Cs, rb, H, D, vD, xy)
 
-plot(t, g_fls, lw=3, lc="black", ls=:dash, label="IlS")
-plot!(t, g_mfls, lw=3, lc="grey", label="MIlS")
+plot(t, g_fls, lw=3, lc="black", ls=:dash, label="FlS")
+plot!(t, g_mfls, lw=3, lc="grey", label="MFlS")
 plot!(xaxis="Time (s)",
     yaxis="g (-)",
     xscale=:log10,

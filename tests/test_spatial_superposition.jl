@@ -5,8 +5,8 @@ Script testing the finite line source (FLS) model from GHEModels.jl.
 using BenchmarkTools
 using Plots
 
-includet("../src/GroundTSimulations.jl")
-using .GroundTSimulations
+includet("../src/GHEModels.jl")
+using .GHEModels
 
 Revise.revise()
 

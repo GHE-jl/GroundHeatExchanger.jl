@@ -2,10 +2,10 @@
 Script testing the analytical model for standing column well (SCW) from GHEModels.jl.
 """
 
-includet("../src/GroundTSimulations.jl")
+includet("../src/GHEModels.jl")
 
 using Plots
-using .GroundTSimulations
+using .GHEModels
 
 function test_scwm()
     # Parameters

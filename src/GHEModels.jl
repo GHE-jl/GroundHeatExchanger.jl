@@ -13,6 +13,7 @@ Julia version: 1.11.3
 """
 
 module GHEModels
+using Revise
 
 # Include files to make the package
 includet("Models.jl")

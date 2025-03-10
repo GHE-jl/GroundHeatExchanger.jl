@@ -2,11 +2,11 @@
 Script testing the nodes generation to apply to analytical models.
 """
 
-includet("../src/GroundTSimulations.jl")
+includet("../src/GHEModels.jl")
 
 using Plots
 using BenchmarkTools
-using .GroundTSimulations
+using .GHEModels
 
 function ils_interp(t, tᵢ, kg, Cg, rb)
     gᵢ = ils(tᵢ, kg, Cg, rb)
