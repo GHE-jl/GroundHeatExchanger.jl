@@ -6,109 +6,132 @@ exchanger (BHE) to form a ground heat exchanger (GHE). Current methods are:
 """
 
 using LinearAlgebra
-using PCHIPInterpolation
-using FFTW
 
-mutable struct GHE_param
+include("Utilities.jl")
+
+struct GHEParam
     """
     Structure including all parameters required to simulate a GHE response.
     """
-    t::Vector{Float64}      # Time range (log)
-    H::Float64              # Borehole depth
-    D::Float64              # Borehole buried depth
-    s::Float64              # Shank spacing (s/2 is the half-shank spacing)
-    rb::Float64             # Borehole radius
-    ri::Float64             # Pipe inlet radius
-    ro::Float64             # Pipe outlet radius
-    ks::Float64             # Ground thermal conductivity
-    kg::Float64             # Grout thermal conductivity
-    kp::Float64             # Pipe thermal conductivity
-    kf::Float64             # Fluid thermal conductivity
-    Cs::Float64             # Ground volumetric specific heat
-    Cg::Float64             # Grout volumetric specific heat
-    Cp::Float64             # Pipe volumetric specific heat
-    Cf::Float64             # Fluid volumetric specific heat
-    ρs::Float64             # Groud density
-    ρg::Float64             # Grout density
-    ρp::Float64             # Pipe density
-    ρf::Float64             # Fluid density
-    V::Float64              # Circulating flow rate
-    vD::Float64             # Groundwater flow
+    t::Union{T,AbstractVector{T}} where T<:Real # Time range [s]
+    H::Float64              # Borehole depth [m]
+    D::Float64              # Borehole buried depth [m]
+    s::Float64              # Shank spacing (s/2 is the half-shank spacing) [m]
+    rb::Float64             # Borehole radius [m]
+    ri::Float64             # Pipe inlet radius [m]
+    ro::Float64             # Pipe outlet radius [m]
+    ks::Float64             # Ground thermal conductivity [W/m-K]
+    kg::Float64             # Grout thermal conductivity [W/m-K]
+    kp::Float64             # Pipe thermal conductivity [W/m-K]
+    kf::Float64             # Fluid thermal conductivity [W/m-K]
+    Cs::Float64             # Ground volumetric specific heat [J/m³-K]
+    Cg::Float64             # Grout volumetric specific heat [J/m³-K]
+    Cp::Float64             # Pipe volumetric specific heat [J/m³-K]
+    Cf::Float64             # Fluid volumetric specific heat [J/m³-K]
+    ρs::Float64             # Groud density [kg/m³]
+    ρg::Float64             # Grout density [kg/m³]
+    ρp::Float64             # Pipe density [kg/m³]
+    ρf::Float64             # Fluid density [kg/m³]
+    V::Float64              # Circulating flow rate [m³/s]
+    vD::Float64             # Groundwater flow [m/s]
+    xy::Matrix{Float64}     # Coordinates of a borefield (unused for single borehole) [m, m]
 end
 
-function gfunc_matrix(params::GHE_param, xy::Matrix{T}, model::String) where T<:Real
+function gfunc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T, xy::Matrix{T},
+    model::String) where T<:Real
     """
+        gfunc_matrix(t, ks, Cs, rb ,H, D, xy, model)
+    
     Function creating a matrix named "gg" that has dimensions [nt x nr], where nt is the length of 
     time steps and nr is the number of radius for the borefield. The matrix can subsequently be used
-    in spatial superposition.
+    in spatial superposition, such as with the function `bloc_matrix()` from this file.
     Inputs:
         - t: Time vector (nt x 1) [s]
-        - rb: Borehole radius [m]
+        - ks: Soil thermal conductivity (1x1) [W/mK]
+        - Cs: Soil volumetric specific heat (1x1) [J/m³K]
+        - rb: Borehole radius (1x1) [m]
+        - H: Borehole depth (1x1) [m]
+        - D: Borehole burried depth (1x1) [m]
         - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
         - model: Name of the numerical model used to generate the interpolant [string]
     Output:
         - gg: A matrix of g-function computed at different time and radius (nt x nr) [-]
     """
-    # Basic parameters
-    nt = length(params.t)
-    nb = size(xy, 1)    # Number of boreholes
+
+    # Set time steps
+    if length(t) > 100
+        s = set_nodes(length(t), 100)  # Set 100 nodes to define the time series
+        t = t[s]
+    else
+        t = t
+    end
+    nt = length(t)
 
     # Evaluate a matrix of radius
+    nb = size(xy, 1)    # Number of boreholes
     r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
-    r = r + Diagonal(params.rb * ones(nb))
+    r = r + Diagonal(rb * ones(nb))
     rᵥ = reshape(r, nb * nb)
     rᵤ = unique(rᵥ)
-    #rᵢ = indexin(rᵥ, rᵤ)
 
     # Compute temperature array depending on the model specified
-    g = Matrix{Float64}(undef, nt, length(rᵤ))
+    gg = Matrix{Float64}(undef, nt, length(rᵤ))
 
     if model == "fls" || "FLS"
         # Compute the model for each radius
         for i in eachindex(rᵤ)
-            g[:, i] = fls(params.t, params.ks, params.Cs, rᵤ[i], params.H, params.D)
+            gg[:, i] = fls(t, ks, Cs, rᵤ[i], H, D)
         end
     end
-    return g
+    return gg, t
 end
 
-function bloc_matrix(params::GHE_param, g::Matrix{T}, xy::Matrix{T}) where {T<:Real}
+function bloc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T,
+    xy::Matrix{T}) where {T<:Real}
     """
+        bloc_matrix(t, ks, Cs, rb, H, D, xy)
+    
     Function that computes the spatial superposition of a borefield using the bloc matrix approach
-    of Dusseault et al. (2018). The g-functions at every radius must already be computed with
-    for example, the function `gfunc_matrix` from this file. This function only produce the spatial
-    superposition from the matrix of g-function.
+    of Dusseault et al. (2018) to obtain g-functions of a borefield. This approach assumes that heat
+    flux is uniform along all the borehole, and that the mean temperature is the same for all 
+    boreholes (Type II). The g-function generated is for an impulse of 1 W/m.
     Inputs:
         - t: Time vector (nt x 1) [s]
-        - g: Matrix of g-function for all time steps and all radius (nt x nr) [-]
+        - ks: Soil thermal conductivity (1x1) [W/mK]
+        - Cs: Soil volumetric specific heat (1x1) [J/m³K]
+        - rb: Borehole radius (1x1) [m]
+        - H: Borehole depth (1x1) [m]
+        - D: Borehole burried depth (1x1) [m]
         - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
     Output:
-        - gₛ: g-function of the borefield spatial superposition [-]
+        - g: g-function of the borefield spatial superposition [-]
     Reference:
-    Dusseault, B., Pasquier, P., & Marcotte, D. (2018). A block matrix formulation for efficient 
-    g-function construction. Renewable Energy, 121, 249–260. 
-    https://doi.org/10.1016/j.renene.2017.12.092
+        Dusseault, B., Pasquier, P., & Marcotte, D. (2018). A block matrix formulation for efficient 
+        g-function construction. Renewable Energy, 121, 249–260. 
+        https://doi.org/10.1016/j.renene.2017.12.092
     """
+    
+    # Compute the ground model for all different radius of the borefield
+    gₘ, tₘ = gfunc_matrix(t, ks, Cs, rb ,H, D, xy, "fls")
 
     # Basic parameters
-    nt = length(params.t)
+    nt = length(tₘ)
     nb = size(xy, 1)    # Number of boreholes
 
     # Evaluate a matrix of radius
     r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
-    r = r + Diagonal(params.rb * ones(nb))
+    r = r + Diagonal(rb * ones(nb))
     rᵥ = reshape(r, nb * nb)
     rᵤ = unique(rᵥ)
     rᵢ = indexin(rᵥ, rᵤ)
 
     # Compute temperature array depending on the model specified
-    gg = Matrix{Float64}(undef, nt, length(rᵥ))
-    gg = g[:, rᵢ]'
-    println(size(gg))
+    gg = Matrix{Float64}(undef, length(rᵥ), nt)
+    gg = gₘ[:, rᵢ]'
 
     # Building the convolution matrix
-    gᵢ = fill(0.0, nt, nb, nb)
-    G = fill(0.0, length(rᵤ) * nt, length(rᵤ) * nt)
+    gᵢ = zeros(nt, nb, nb)
+    G = zeros(nb * nt, nb * nt)
 
     for i in 1:nt
         for j in 1:nt
@@ -119,47 +142,63 @@ function bloc_matrix(params::GHE_param, g::Matrix{T}, xy::Matrix{T}) where {T<:R
 
         for ii in 1:nb
             for jj in 1:nb
-                println(ii)
-                println(jj)
                 G[(ii-1)*nt+i:ii*nt, (jj-1)*nt+i] = gᵢ[i:end, ii, jj]
             end
         end
     end
 
-    ## Create inputs to solve the linear system
+    # Create inputs to solve the linear system
     Gₕ = [[G; repeat(I(nt), 1, nb)] [repeat(I(nt), nb, 1); zeros(nt, nt)]]
     b = zeros((nb + 1) * nt)
     b[nb*nt+1] = 1
-    gₛ = similar(b)
+    g = similar(b)
 
     # Solve the linear system
-    gₛ = Gₕ \ b
-    gₛ = -nb * gₛ[nb*nt+1:end]
-    return gₛ
+    g = Gₕ \ b
+
+    # Output the transfer function
+    if length(t) > 100
+        return pchip_interpolation(tₘ, -g[nb*nt+1:end], t)
+    else
+        return -g[nb*nt+1:end]
+    end
 end
 
-function successive_flux(t::Vector{T}, g::Matrix{T}, rb::T, xy::Matrix{T}) where {T<:Real}
+function successive_flux(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T,
+    xy::Matrix{T}) where {T<:Real}
     """
+        successive_flux(t, ks, Cs, rb, H, D, xy)
+    
     Iteratively solve spatial superposition for a borefield using the successive flux approach of
-    Nguyen and Pasquier (2021). The required g-functions are computed by, for example, the function
-    `gfunc_matrix` from this file. This function only produce the spatial
-    superposition from the matrix of g-function.
+    Nguyen and Pasquier (2021) to obtain g-functions of a borefield. This approach assumes that heat
+    flux is uniform along all the borehole, and that the mean temperature is the same for all 
+    boreholes (Type II). The g-function generated is for an impulse of 1 W/m.
     Inputs:
         - t: Time vector (nt x 1) [s]
-        - g: Matrix of g-function for all time steps and all radius (nt x nr) [-]
-        - rb: Borehole radius [m]
+        - ks: Soil thermal conductivity (1x1) [W/mK]
+        - Cs: Soil volumetric specific heat (1x1) [J/m³K]
+        - rb: Borehole radius (1x1) [m]
+        - H: Borehole depth (1x1) [m]
+        - D: Borehole burried depth (1x1) [m]
         - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
     Output:
         - gₛ: g-function of the borefield spatial superposition [-]
     Reference:
-    Nguyen, A., & Pasquier, P. (2021). A successive flux estimation method for rapid g-function 
-    construction of small to large-scale ground heat exchanger. Renewable Energy, 165, 359–368. 
-    https://doi.org/10.1016/j.renene.2020.10.074
+        Nguyen, A., & Pasquier, P. (2021). A successive flux estimation method for rapid g-function 
+        construction of small to large-scale ground heat exchanger. Renewable Energy, 165, 359–368. 
+        https://doi.org/10.1016/j.renene.2020.10.074
     """
 
     # Basic parameters
-    nt = length(t)
+    #nt = length(t)      # Number of time steps
     nb = size(xy, 1)    # Number of boreholes
+
+    tspan = range(log10(60.), log10(3600. * 24*365*100), length=100)
+    rspan = range(log10(rb), log10(100), 100)
+
+    gₘ, tₘ = gfunc_matrix(t, ks, Cs, rb ,H, D, xy, "fls")
+    #for ii in 1:length(rspan)
+
 
     # Evaluate a matrix of radius
     r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
@@ -171,7 +210,7 @@ function successive_flux(t::Vector{T}, g::Matrix{T}, rb::T, xy::Matrix{T}) where
     g_int = Interpolator(t, g)
 
     # Define constants
-    tfinal = tspan[end]
+    tfinal = t[end]
     nt_hour = 24
     nt_day = 30
     nt_month = 12
@@ -250,7 +289,7 @@ function successive_flux(t::Vector{T}, g::Matrix{T}, rb::T, xy::Matrix{T}) where
     return gₛ
 end
 
-function successibe_assembly(t, G, g)
+function successibe_assembly(t::Union{T,AbstractVector{T}}, G, g)
     """
     Function that assemble the successive flux of Nguyen and Pasquier (2021). Used in the 
     `successive_flux` function from this file.

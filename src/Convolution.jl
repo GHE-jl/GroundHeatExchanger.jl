@@ -1,6 +1,17 @@
 using FFTW
+FFTW.set_num_threads(Sys.CPU_THREADS)
 
-function convolution(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:Real}
+# Dictionary to cache FFT plans by length
+const FFT_PLANS = Dict{Int, FFTW.rFFTWPlan{Float64, true, 1}}()
+
+# Helper to get or create a plan for a given length
+function get_fft_plan(len::Int)
+    get!(FFT_PLANS, len) do
+        plan_rfft(zeros(len))
+    end
+end
+
+function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}}) where {T<:Real}
     """
         convolution(f, g)
     
@@ -14,17 +25,16 @@ function convolution(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:Real}
     """
     n = length(f)
     total_length = 2 * n - 1
+    optimal_length = nextprod([2, 3, 5, 7], total_length)
 
     # Preallocate arrays
-    f_pad = zeros(T, total_length)
-    g_pad = zeros(T, total_length)
-    y = zeros(n)
-
-    # Fill preallocated arrays
+    f_pad = zeros(T, optimal_length)
+    g_pad = zeros(T, optimal_length)
     copyto!(f_pad, f)
     copyto!(g_pad, g)
 
     # Precompute FFT plans
+    #fft_plan = get_fft_plan(optimal_length)
     fft_plan = plan_rfft(f_pad)
 
     # Compute FFTs
@@ -32,9 +42,10 @@ function convolution(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:Real}
     F_g = fft_plan * g_pad
 
     # Element-wise multiplication (in-place)
-    F_f .*= F_g
+    F_fg = F_f .* F_g
 
     # Inverse FFT to get convolution resuls
-    y = irfft(F_f, total_length)
-    return y[1:n]
+    y = irfft(F_fg, optimal_length)[1:n]
+    return y
 end
+

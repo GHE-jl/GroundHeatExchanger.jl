@@ -17,13 +17,15 @@ using Revise
 
 # Include files to make the package
 includet("Models.jl")
+includet("MFLS.jl")
 includet("SpatialSuperposition.jl")
 includet("Convolution.jl")
 includet("ThermalResistance.jl")
 includet("Utilities.jl")
 
 # Ground model export
-export ils, fls, mfls, scwm
+export ils, fls, scwm
+export mfls_single_borehole, mfls_borefield_I
 
 # Spatial superposition export
 export GHE_param, gfunc_matrix, bloc_matrix, successive_flux
@@ -33,14 +35,15 @@ export convolution,
     Rb_first_order_multipole,
     Ra_first_order_multipole,
     set_nodes,
-    pchip_interpolation
+    pchip_interpolation,
+    fig_color
 
 # Temperature simulations
 export ghe_model,
     building_to_ground_loads,
     outlet_temperature
 
-function ghe_model(t::Vector{T}, kg::T, Cg::T, rb::T, H::T, D::T, xy::Array{T}; 
+function ghe_model(t::Vector{T}, ks::T, Cs::T, rb::T, H::T, D::T, xy::Array{T}; 
     model::String="fls") where T<:Real
     """
     Allow to run different model with various inputs. (Very poor definition right here)
@@ -56,10 +59,10 @@ function ghe_model(t::Vector{T}, kg::T, Cg::T, rb::T, H::T, D::T, xy::Array{T};
 
     # Select if spatial superposition is required or not
     if size(xy,1) > 1
-        gₛ = spatial_sup(t[s], kg, Cg, rb, H, D, xy, model)
+        gₛ = bloc_matrix(t[s], ks, Cs, rb, H, D, xy, model)
     else
         if model == "fls" || "FLS"
-            gₛ = fls(t[s], kg, Cg, rb, H, D)
+            gₛ = fls(t[s], ks, Cs, rb, H, D)
         end
     end
 
@@ -69,26 +72,6 @@ function ghe_model(t::Vector{T}, kg::T, Cg::T, rb::T, H::T, D::T, xy::Array{T};
     else
         return gₛ
     end
-end
-
-function building_to_ground_loads(Qb::Vector{T1}, COPh::T2, COPc::T2,
-    pc_peakh=1, pc_peakc=1) where {T1<:Real, T2<:Real}
-    """
-    Converts building loads to ground loads, as a function of COP for both heating (COPh) and 
-    cooling (COPc). Option inputs can be used to specify the percentage (pc) of the peak loads (for
-    both heating and cooling) that has to be covered by the geothermal system. The default is 100%
-    coverage.
-    """
-
-    # Cut the loads to the percentage of peak coverage.
-    Qb[Qb .< pc_peakh*minimum(Qb)] .= pc_peakh*minimum(Qb)
-    Qb[Qb .> pc_peakc*maximum(Qb)] .= pc_peakc*maximum(Qb)
-
-    # Convert building loads (Qb) to ground loads (Qg)
-    Qgh = Qb[Qb .<= 0] * (1 - (1/COPh))
-    Qgc = Qb[Qb .> 0] * (1 + (1/COPc))
-    Qg = Qgh + Qgc
-    return Qg
 end
 
 function outlet_temperature(g::Vector{T}, Q::Vector{T}, V::Vector{T}, H::T, Rb::T, T₀::T

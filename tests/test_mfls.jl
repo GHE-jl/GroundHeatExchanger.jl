@@ -1,5 +1,5 @@
 """
-Script testing the finite line source (FLS) model from GHEModels.jl
+Script testing the models from GHEModels.jl.
 """
 
 using BenchmarkTools
@@ -34,25 +34,26 @@ V = 30.0 / 60000                # Circulating flow rate
 vD = 1e-9                       # Groundwater flow
 #Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
 
-# Spatial superposition with bloc matrix
 nx, ny, B = 1, 1, 5.
-xy1 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_1 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy1)
+xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
+@time g_mfls_1 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
 
 nx, ny, B = 2, 2, 5.
-xy2 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_2 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy2)
-#@time g_fls_2 = successive_flux()
+xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
+@time g_mfls_2 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
 
-nx, ny, B = 5, 5, 5.
-xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_3 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
+nx, ny, B = 10, 10, 5.
+xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
+@time g_mfls_3 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
+
+#@time g_fls = fls(t, ks, Cs, rb, H, D)
 
 # Figure
 col = fig_color()
-plot(t, g_fls_1, lw=3, lc=col[1], label="FLS - 1x1")
-plot!(t, g_fls_2, lw=2, lc=col[2], label="FLS - 2x2")
-plot!(t, g_fls_3, lw=1, lc=col[3], label="FLS - 5x5")
+
+plot(t, g_mfls_1, lw=3, lc=col[1], label="MFLS - 1x1")
+plot!(t, g_mfls_2, lw=2, lc=col[2], label="MFLS - 2x2")
+plot!(t, g_mfls_3, lw=1, lc=col[3], label="MFLS - 10x10")
 plot!(xaxis="Time (s)",
     yaxis="g (-)",
     xscale=:log10,

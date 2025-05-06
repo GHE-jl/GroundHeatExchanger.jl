@@ -7,9 +7,10 @@ simplest approach.
 function Rb_first_order_multipole(V::T, ks::T, kg::T, kp::T, kf::T, cf::T, ρf::T, μf::T,
     rb::T, ri::T, ro::T, s::T) where T<:Real
     """
-    Computes the first-order multipole method for the borehole thermal resistance
-    (Eq. 13 of Javed and Spitler 2017) for a single U-tube ground heat exchanger.
+        Rb_first_order_multipole(V, ks, kg, kp, kf, cf, ρf, μf, rb, ri, ro, s)
     
+    Computes the first-order multipole method for the borehole thermal resistance (Eq. 13 of Javed
+    and Spitler 2017) for a single U-tube ground heat exchanger.
     Inputs:
         - ̇V: Fluid *speed* in pipe [m/s]
         - ks, kg, kp, kf: Ground, grout, pipe, fluid thermal condcutvitiy [W/mK]
@@ -18,14 +19,12 @@ function Rb_first_order_multipole(V::T, ks::T, kg::T, kp::T, kf::T, cf::T, ρf::
         - μf: Fluid viscosity [kg/sm]
         - rb, ri, ro: Borehole, inlet pipe and outlet pipe radius [m]
         - s: Shank spacing (distance between the two U-tubes) [m]
-    
     Output:
         - Rb: Borehole thermal resistance [mK/W]
-    
     Reference:
-    Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods for
-    grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
-    https://doi.org/10.1016/j.apenergy.2016.11.079
+        Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
+        for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
+        https://doi.org/10.1016/j.apenergy.2016.11.079
     
     Author: Gabriel Dion
     Date: 2025-02
@@ -57,25 +56,24 @@ end
 function Ra_first_order_multipole(V::T, ks::T, kg::T, kp::T, kf::T, cf::T, ρf::T, μf::T,
     rb::T, ri::T, ro::T, s::T) where T<:Real
     """
-    Computes the first-order multipole method for the total internal resistance
-    (Eq. 26 of Javed and Spitler 2017) for a single U-tube ground heat exchanger.
+        Ra_first_order_multipole(V, ks, kg, kp, kf, cf, ρf, μf, rb, ri, ro, s)
     
+    Computes the first-order multipole method for the total internal resistance (Eq. 26 of Javed 
+    and Spitler 2017) for a single U-tube ground heat exchanger.
     Inputs:
-        - ̇V: Fluid *speed* in pipe [m/s]
+        - V: Fluid *speed* in pipe [m/s]
         - ks, kg, kp, kf: Soil, grout, pipe, fluid thermal condcutvitiy [W/mK]
         - cf: Fluid specific heat [J/kgK]
         - ρf: Fluid density [kg/m^3]
         - μf: Fluid viscosity [kg/sm]
         - rb, ri, ro: Borehole, inlet pipe and outlet pipe radius [m]
         - s: Shank spacing (distance between the two U-tubes) [m]
-    
     Output:
         - Rₐ: Borehole thermal resistance [mK/W]
-    
     Reference:
-    Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods for
-    grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
-    https://doi.org/10.1016/j.apenergy.2016.11.079
+        Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
+        for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
+        https://doi.org/10.1016/j.apenergy.2016.11.079
     
     Author: Gabriel Dion
     Date: 2025-02
