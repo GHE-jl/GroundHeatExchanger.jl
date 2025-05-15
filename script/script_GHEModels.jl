@@ -40,6 +40,8 @@ vD = 1e-9                       # Groundwater flow
 @time g_mfls = mfls_single_borehole(t, k.s, C.s, r.b, H, D, vD)
 @time g_scwm = scwm(t, k.s, C.s, r.b, H, V, 0.01)
 
+ghe_model(t, k.s, C.s, r.b, H, D, [0.0 0.0])
+
 col = palette(:tab10)
 plot(t, g_ils, lw = 4, lc = col[1], label = "IlS")
 plot!(t, g_fls, lw = 3, lc = col[2], label = "FlS")

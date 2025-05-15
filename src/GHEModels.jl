@@ -13,15 +13,14 @@ Julia version: 1.11.3
 """
 
 module GHEModels
-using Revise
 
 # Include files to make the package
-includet("Models.jl")
-includet("MFLS.jl")
-includet("SpatialSuperposition.jl")
-includet("Convolution.jl")
-includet("ThermalResistance.jl")
-includet("Utilities.jl")
+include("Models.jl")
+include("MFLS.jl")
+include("SpatialSuperposition.jl")
+include("Convolution.jl")
+include("ThermalResistance.jl")
+include("Utilities.jl")
 
 # Ground model export
 export ils, fls, scwm
@@ -43,7 +42,7 @@ export ghe_model,
     building_to_ground_loads,
     outlet_temperature
 
-function ghe_model(t::Vector{T}, ks::T, Cs::T, rb::T, H::T, D::T, xy::Array{T}; 
+function ghe_model(t::AbstractVector{T}, ks::T, Cs::T, rb::T, H::T, D::T, xy::Array{T}; 
     model::String="fls") where T<:Real
     """
     Allow to run different model with various inputs. (Very poor definition right here)
@@ -58,8 +57,8 @@ function ghe_model(t::Vector{T}, ks::T, Cs::T, rb::T, H::T, D::T, xy::Array{T};
     end
 
     # Select if spatial superposition is required or not
-    if size(xy,1) > 1
-        gₛ = bloc_matrix(t[s], ks, Cs, rb, H, D, xy, model)
+    if size(xy, 1) > 1
+        gₛ = bloc_matrix(t[s], ks, Cs, rb, H, D, xy)
     else
         if model == "fls" || "FLS"
             gₛ = fls(t[s], ks, Cs, rb, H, D)

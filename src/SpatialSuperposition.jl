@@ -103,6 +103,7 @@ function bloc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D
         - H: Borehole depth (1x1) [m]
         - D: Borehole burried depth (1x1) [m]
         - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
+            E.g.: [0 0] (to have a matrix input).
     Output:
         - g: g-function of the borefield spatial superposition [-]
     Reference:
@@ -289,7 +290,7 @@ function successive_flux(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::
     return gₛ
 end
 
-function successibe_assembly(t::Union{T,AbstractVector{T}}, G, g)
+function successibe_assembly(t::Union{T,AbstractVector{T}}, G, g) where T<:Real
     """
     Function that assemble the successive flux of Nguyen and Pasquier (2021). Used in the 
     `successive_flux` function from this file.

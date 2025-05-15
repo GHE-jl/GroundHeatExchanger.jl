@@ -1,6 +1,7 @@
 using SpecialFunctions
 using QuadGK
 
+
 function mfls_single_borehole(
         t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T, H::T, D::T, vD::T) where {T <: Real}
     """
@@ -43,9 +44,8 @@ function mfls_single_borehole(
     # Compute the MFLS
     for i in 1:nt
         integral, _ = quadgk(
-            s -> exp(-Pe^2 / (16 * (s^2)) - (Rᵦ^2 * s^2)) *
-                 integrand_mfls(s, d) / (s^2),
-            Foₛ[i], Inf, rtol = 1e-6)
+            s -> exp(-Pe^2 / (16 * (s^2)) - (Rᵦ^2 * s^2)) * integrand_mfls(s, d) / (s^2),
+                Foₛ[i], Inf, rtol = 1e-6)
         g[i] = integral
     end
     return g * I₀ / (4 * π * ks)
@@ -145,7 +145,16 @@ function mfls_borefield_I(
     return (gᵢ .+ gᵢⱼ) ./ (nb)
 end
 
-function integrand_mfls(s::T, d::T) where {T <: Union{T,AbstractVector}}
+function ierf(x::T) where {T <: AbstractFloat}
+    """
+        ierf(x)
+       
+    Inverse "erf" function used in the FLS model
+    """
+    return x * erf(x) - 1 / sqrt(π) * (1 - exp(-x^2))
+end
+
+function integrand_mfls(s::T, d::T) where {T <: AbstractFloat}
     """
         integrand_fls(s, d)
 
@@ -153,13 +162,4 @@ function integrand_mfls(s::T, d::T) where {T <: Union{T,AbstractVector}}
     """
     return (2 * ierf(s) + 2 * ierf(s + 2 * d * s) - ierf(2 * s + 2 * d * s) -
             ierf(2 * d * s))
-end
-
-function ierf(x::T) where {T <: Union{T,AbstractVector}}
-    """
-        ierf(x)
-       
-    Inverse "erf" function used in the FLS model
-    """
-    return x * erf(x) - 1 / sqrt(π) * (1 - exp(-x^2))
 end
