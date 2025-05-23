@@ -40,8 +40,9 @@ xy = [0., 0.]
 @time g_fls = fls(t, ks, Cs, rb, H, D)
 @time g_mfls = mfls(t, ks, Cs, rb, H, D, vD, xy)
 
-plot(t, g_fls, lw=3, lc="black", ls=:dash, label="FlS")
-plot!(t, g_mfls, lw=3, lc="grey", label="MFlS")
+col = fig_color()
+plot(t, g_fls, lw=3, lc=col[1], ls=:dash, label="FlS")
+plot!(t, g_mfls, lw=3, lc=col[2], label="MFlS")
 plot!(xaxis="Time (s)",
     yaxis="g (-)",
     xscale=:log10,

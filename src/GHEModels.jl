@@ -21,6 +21,7 @@ include("SpatialSuperposition.jl")
 include("Convolution.jl")
 include("ThermalResistance.jl")
 include("Utilities.jl")
+include("FigColors.jl")
 
 # Ground model export
 export ils, fls, scwm

@@ -50,7 +50,6 @@ xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
 
 # Figure
 col = fig_color()
-
 plot(t, g_mfls_1, lw=3, lc=col[1], label="MFLS - 1x1")
 plot!(t, g_mfls_2, lw=2, lc=col[2], label="MFLS - 2x2")
 plot!(t, g_mfls_3, lw=1, lc=col[3], label="MFLS - 10x10")

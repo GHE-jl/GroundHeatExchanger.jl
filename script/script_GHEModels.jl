@@ -42,7 +42,7 @@ vD = 1e-9                       # Groundwater flow
 
 ghe_model(t, k.s, C.s, r.b, H, D, [0.0 0.0])
 
-col = palette(:tab10)
+col = fig_color()
 plot(t, g_ils, lw = 4, lc = col[1], label = "IlS")
 plot!(t, g_fls, lw = 3, lc = col[2], label = "FlS")
 plot!(t, g_mfls, lw = 2, lc = col[3], label = "MFlS")
