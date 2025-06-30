@@ -15,16 +15,15 @@ Julia version: 1.11.3
 module GHEModels
 
 # Include files to make the package
-include("Models.jl")
+include("GroundModels.jl")
 include("MFLS.jl")
 include("SpatialSuperposition.jl")
 include("Convolution.jl")
 include("ThermalResistance.jl")
 include("Utilities.jl")
-include("FigColors.jl")
 
 # Ground model export
-export ils, fls, scwm
+export ils, ics, fls, ilsβ
 export mfls_single_borehole, mfls_borefield_I
 
 # Spatial superposition export
@@ -35,8 +34,7 @@ export convolution,
     Rb_first_order_multipole,
     Ra_first_order_multipole,
     set_nodes,
-    pchip_interpolation,
-    fig_color
+    pchip_interpolation
 
 # Temperature simulations
 export ghe_model,

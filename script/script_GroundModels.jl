@@ -3,15 +3,17 @@ Script showing the analytical models from GHEModels.jl using a single borehole.
 """
 
 using BenchmarkTools
-using Plots
+using CairoMakie
 
 includet("../src/GHEModels.jl")
 using .GHEModels
+includet("../src/FigOptions.jl")
+update_fig_theme()
 
 # Paremeters
-t2 = range(3600.0, 3600.0*24*365*100, step=3600)                       # Time (lin)
-#s = set_nodes(length(t), 150)                                                  # Nodes
-t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))) # Time (log)
+#t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
+#s = set_nodes(length(t), 150)                                                       # Nodes
+t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))          # Time (log)
 H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
@@ -31,31 +33,26 @@ C = (s = 2.11e6,                # Ground volumetric specific heat
     p = 1000.0,                 # Pipe density
     f = 1000.0)                 # Fluid density
 V = 30.0 / 60000                # Circulating flow rate
-vD = 1e-9                       # Groundwater flow
+vD = 1e-7                       # Groundwater flow
 #Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
 
 # Run models
 @time g_ils = ils(t, k.s, C.s, r.b)
+@time g_ics = ics(t, k.s, C.s, r.b)
 @time g_fls = fls(t, k.s, C.s, r.b, H, D)
 @time g_mfls = mfls_single_borehole(t, k.s, C.s, r.b, H, D, vD)
-@time g_scwm = scwm(t, k.s, C.s, r.b, H, V, 0.01)
+@time g_ilsβ = ilsβ(t, k.s, C.s, r.b, H, V, 0.01)
 
-ghe_model(t, k.s, C.s, r.b, H, D, [0.0 0.0])
+#ghe_model(t, k.s, C.s, r.b, H, D, [0.0 0.0])
 
 col = fig_color()
-plot(t, g_ils, lw = 4, lc = col[1], label = "IlS")
-plot!(t, g_fls, lw = 3, lc = col[2], label = "FlS")
-plot!(t, g_mfls, lw = 2, lc = col[3], label = "MFlS")
-plot!(t, g_scwm, lw = 1, lc = col[4], label = "SCWM")
-plot!(xaxis = "Time (s)",
-    yaxis = "g (-)",
-    xscale = :log10,
-    framestyle = :box,
-    grid = false,
-    xlabelfontsize = 8,
-    ylabelfontsize = 8,
-    xtickfontsize = 8,
-    ytickfontsize = 8,
-    legendfontsize = 8,
-    legend = :topleft
-)
+t̃ = t / (3600 * 24 * 365)
+f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
+ax = Axis(f[1, 1], xlabel = "Time (yr)", ylabel = "g-function (-)", xscale = log10)
+lines!(ax, t̃, g_ils, color = col[1], linewidth = 4, label = "ILS")
+lines!(ax, t̃, g_ics, color = col[2], linewidth = 2, label = "ICS")
+lines!(ax, t̃, g_fls, color = col[3], linewidth = 2, label = "FLS")
+lines!(ax, t̃, g_mfls, color = col[4], linewidth = 2, label = "MFLS")
+lines!(ax, t̃, g_ilsβ, color = col[5], linewidth = 2, label = "ILSβ")
+axislegend(ax, position = :lt)
+display(f);
