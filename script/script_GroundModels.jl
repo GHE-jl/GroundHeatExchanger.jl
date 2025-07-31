@@ -1,12 +1,11 @@
 """
-Script showing the analytical models from GHEModels.jl using a single borehole.
+Script showcasing the analytical models from GHEModels.jl using a single borehole.
 """
 
 using BenchmarkTools
 using CairoMakie
 
 includet("../src/GHEModels.jl")
-using .GHEModels
 includet("../src/FigOptions.jl")
 update_fig_theme()
 
