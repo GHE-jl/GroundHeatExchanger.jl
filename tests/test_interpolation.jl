@@ -8,7 +8,7 @@ using Plots
 includet("../src/GHEModels.jl")
 using .GHEModels
 
-# Paremeters
+# Define paremeters
 #t = collect(range(3600.0, 3600.0*24*365*100, step=3600))                       # Time (lin)
 t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))) # Time (log)
 ᵢ = set_nodes(length(t), 150)                                                   # Nodes
@@ -16,8 +16,8 @@ H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
 r = (b = 0.08,                  # Borehole radius
-    i = 0.017,                  # Pipe inlet radius
-    o = 0.022)                  # Pipe outlet radius
+    o = 0.022,                  # Pipe outlet radius
+    i = 0.017)                  # Pipe inlet radius
 k = (s = 3.0,                   # Ground thermal conductivity
     g = 1.6,                    # Grout thermal conductivity
     p = 0.4,                    # Pipe thermal conductivity
@@ -45,19 +45,4 @@ end
 #@time g = ils(t, ks, Cs, rb)
 gᵢ = ils_interp(t, t[ᵢ], k.s, C.s, r.b)
 
-# Plot
-#plot(t, g; label="full", lw=1.5, lc=:black)
-#plot!(t[ᵢ], gᵢ; label="nodes", lw=1.5, mc=:blue, seriestype=:scatter)
-
-#=plot!(;
-    xaxis="Time (s)",
-    yaxis="g (-)",
-    xscale=:log10,
-    framestyle=:box,
-    grid=false,
-    xlabelfontsize=8,
-    ylabelfontsize=8,
-    xtickfontsize=8,
-    ytickfontsize=8,
-    legendfontsize=8
-)=#
+# Figure

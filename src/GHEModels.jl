@@ -18,9 +18,11 @@ module GHEModels
 include("GroundModels.jl")
 include("MFLS.jl")
 include("SpatialSuperposition.jl")
-include("Convolution.jl")
-include("ThermalResistance.jl")
+include("Convolutions.jl")
+include("ThermalResistances.jl")
 include("Utilities.jl")
+
+using .ThermalResistances
 
 # Ground model export
 export ils, ics, fls, ilsβ
@@ -29,10 +31,17 @@ export mfls_single_borehole, mfls_borefield_I
 # Spatial superposition export
 export GHE_param, gfunc_matrix, bloc_matrix, successive_flux
 
+# Thermal resistance export
+export R_f,
+    R_p,
+    R_b_zeroth_order_multipole,
+    R_b_first_order_multipole,
+    R_b,
+    R_a_first_order_multipole,
+    R_bₑ
+
 # Other export from included files
 export convolution,
-    Rb_first_order_multipole,
-    Ra_first_order_multipole,
     set_nodes,
     pchip_interpolation
 

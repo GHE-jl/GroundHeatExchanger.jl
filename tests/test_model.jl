@@ -10,7 +10,7 @@ using .GHEModels
 includet("../src/FigOptions.jl")
 update_fig_theme()
 
-# Paremeters
+# Define paremeters
 #t = range(3600., 3600*24*365*100, step=3600)                          # Time range (lin)
 #s = set_nodes(length(t), 150)                                                  # Nodes
 t = exp10.(range(log10(1.), log10(3600*24*365*100), length=500))      # Time range (log)
@@ -18,8 +18,8 @@ H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
 r = (b = 0.08,                  # Borehole radius
-    i = 0.017,                  # Pipe inlet radius
-    o = 0.022)                  # Pipe outlet radius
+    o = 0.022,                  # Pipe outlet radius
+    i = 0.017)                  # Pipe inlet radius
 k = (s = 3.0,                   # Ground thermal conductivity
     g = 1.6,                    # Grout thermal conductivity
     p = 0.4,                    # Pipe thermal conductivity

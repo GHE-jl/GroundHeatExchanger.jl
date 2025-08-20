@@ -4,7 +4,7 @@ available are:
     - Infinite line source of Ingersol (1948) (ils)
     - Infinite cylindrical source of Ingersol (1959) (ics)
     - Finite line source of Claesson and Javed (2011) (fls)
-    - The standing column well analytical model of Nguyen et al. (2025) (scwm)
+    - The standing column well analytical model of Nguyen et al. (2025) (ilsβ)
 """
 
 using SpecialFunctions

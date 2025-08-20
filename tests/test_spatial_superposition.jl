@@ -8,7 +8,7 @@ using Plots
 includet("../src/GHEModels.jl")
 using .GHEModels
 
-# Paremeters
+# Define paremeters
 #t = collect(range(3600.0, 3600.0*24*365*100, step=3600))                       # Time (lin)
 #ᵢ = set_nodes(length(t), 150)                                                   # Nodes
 t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))) # Time (log)
@@ -16,8 +16,8 @@ H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
 r = (b = 0.08,                  # Borehole radius
-    i = 0.017,                  # Pipe inlet radius
-    o = 0.022)                  # Pipe outlet radius
+    o = 0.022,                  # Pipe outlet radius
+    i = 0.017)                  # Pipe inlet radius
 k = (s = 3.0,                   # Ground thermal conductivity
     g = 1.6,                    # Grout thermal conductivity
     p = 0.4,                    # Pipe thermal conductivity
@@ -49,18 +49,3 @@ xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
 @time g_fls_3 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
 
 # Figure
-col = fig_color()
-plot(t, g_fls_1, lw=3, lc=col[1], label="FLS - 1x1")
-plot!(t, g_fls_2, lw=2, lc=col[2], label="FLS - 2x2")
-plot!(t, g_fls_3, lw=1, lc=col[3], label="FLS - 5x5")
-plot!(xaxis="Time (s)",
-    yaxis="g (-)",
-    xscale=:log10,
-    framestyle=:box,
-    grid=false,
-    xlabelfontsize=8,
-    ylabelfontsize=8,
-    xtickfontsize=8,
-    ytickfontsize=8,
-    legendfontsize=8,
-    legend=:topleft)

@@ -1,17 +1,19 @@
 """
-Script testing the models from GHEModels.jl.
+Script showcasing the non-stationary convolution from Convolutions.jl.
 """
 
 using BenchmarkTools
-using Plots
+using CairoMakie
 
-includet("../src/GHEModels.jl")
-using .GHEModels
+includet("../src/Convolutions.jl")
+includet("../src/GroundModels.jl")
+
+includet("../src/FigOptions.jl")
+update_fig_theme()
+col = fig_color()
 
 # Define paremeters
-#t = collect(range(3600.0, 3600.0*24*365*100, step=3600))                       # Time (lin)
-#ᵢ = set_nodes(length(t), 150)                                                   # Nodes
-t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))) # Time (log)
+t = range(60.0, 3600.0*24*6, step=60) # Time (lin)
 H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
@@ -30,22 +32,25 @@ C = (s = 2.11e6,                # Ground volumetric specific heat
     g = 1000.0,                 # Grout density
     p = 1000.0,                 # Pipe density
     f = 1000.0)                 # Fluid density
-V = 30.0 / 60000                # Circulating flow rate
-vD = 1e-9                       # Groundwater flow
-#Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
 
-nx, ny, B = 1, 1, 5.
-xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_mfls_1 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
+# Define operating conditions
+q = 10000.0 * ones(60*24*6) / H # Constant heating power signal for every minutes in 6 days
+V = repeat([15.0, 30.0, 45.0] / 60000, inner = 60 * 24 * 2)                # Circulating flow rate
+n_state = 3
+ind, s = state_transitions(V)
 
-nx, ny, B = 2, 2, 5.
-xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_mfls_2 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
+# Create transfer functions
+ks = [1., 2., 3.]
+g_fls = hcat([fls(t, k, C.s, r.b, H, D) for k in ks]...)
 
-nx, ny, B = 10, 10, 5.
-xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_mfls_3 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
+# Non-stationary convolution
+dT = convolution_ns(Q, g_fls, ind, s)
 
-#@time g_fls = fls(t, ks, Cs, rb, H, D)
-
-# Figure
+f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
+ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = "g-function (-)", xscale = log10)
+for i in 1:3
+    lines!(ax, t, g_fls[:, i], color = col[i], linewidth = 1.5)
+end
+ax = Axis(f[2, 1], xlabel = L"$t$ (s)", ylabel = "dT (°C)", xscale = log10)
+lines!(ax, t, dT, color = :black, linewidth = 1.5)
+display(f)
