@@ -1,17 +1,20 @@
 """
-Script testing the finite line source (FLS) model from GHEModels.jl
+Script testing the spatial superposition with the finite line source (FLS) model.
 """
 
 using BenchmarkTools
-using Plots
+using CairoMakie
 
 includet("../src/GHEModels.jl")
 using .GHEModels
+includet("../src/FigOptions.jl")
+update_fig_theme()
+col = fig_color()
 
 # Define paremeters
 #t = collect(range(3600.0, 3600.0*24*365*100, step=3600))                       # Time (lin)
 #ᵢ = set_nodes(length(t), 150)                                                   # Nodes
-t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))) # Time (log)
+t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 5000))) # Time (log)
 H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
@@ -49,3 +52,7 @@ xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
 @time g_fls_3 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
 
 # Figure
+f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
+ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = "g (-)", xscale = log10)
+lines!(ax, t, g_fls_3 * 2 * π * k.s * size(xy3, 1), color = col[1])
+display(f);
