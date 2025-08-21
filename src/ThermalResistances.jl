@@ -1,5 +1,5 @@
 """
-Module that allows to compute the borehole thermal resistance Rb of a ground heat exchanger.
+Fuctions that allows to compute the borehole thermal resistance Rb of a ground heat exchanger.
 The basic local equation is:
     Rb = (Tf - Tb) / qb
 where Tf is the local average fluid temperature, Tb is the borehole wall temperature, q_b is the
@@ -14,16 +14,6 @@ effective borehole thermal resistance Rbₑ (or Rb*).
 Author: Gabriel Dion
 Date: 2025-08
 """
-
-module ThermalResistances
-
-export R_f,
-    R_p,
-    R_b_zeroth_order_multipole,
-    R_b_first_order_multipole,
-    R_b,
-    R_a_first_order_multipole,
-    R_bₑ
 
 function R_f(V̇::T, kf::T, ri::T, cf::T = 4200.0, ρf::T = 1000.0, μf::T = 1.3e-3) where {T <: Real}
     """
@@ -423,5 +413,4 @@ function _Rbₑ(V::T, cf::T, ρf::T, H::T, Rb::T, Ra::T) where {T <: Real}
 
     # Final calculation of the  effective borehole thermal resistance
     return (Rbₑ1 + Rbₑ2) / 2
-end
 end

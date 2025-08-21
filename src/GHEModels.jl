@@ -22,8 +22,6 @@ include("Convolutions.jl")
 include("ThermalResistances.jl")
 include("Utilities.jl")
 
-using .ThermalResistances
-
 # Ground model export
 export ils, ics, fls, ilsβ
 export mfls_single_borehole, mfls_borefield_I
