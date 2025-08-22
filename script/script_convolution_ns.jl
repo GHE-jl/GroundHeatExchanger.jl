@@ -34,23 +34,37 @@ C = (s = 2.11e6,                # Ground volumetric specific heat
     f = 1000.0)                 # Fluid density
 
 # Define operating conditions
+Q = 10000.0 * ones(60*24*6)
 q = 10000.0 * ones(60*24*6) / H # Constant heating power signal for every minutes in 6 days
-V = repeat([15.0, 30.0, 45.0] / 60000, inner = 60 * 24 * 2)                # Circulating flow rate
-n_state = 3
-ind, s = state_transitions(V)
+
+#ks = [1., 2., 3., 2., 3., 1.]
+#V1 = repeat(ks, inner = Integer(60 * 24 * 1))
+#@time ind, s, ind_unique = state_transitions(V1)
+
+ks = [3., 2., 3., 1]
+H = [125.0, 150.0, 125.0]
+V1 = repeat(ks, inner = Integer(60 * 24 * 1.5))
+V2 = repeat(H, inner = Integer(60 * 24 * 2))
+@time ind, s, ind_unique = state_transitions(V1, V2)
 
 # Create transfer functions
-ks = [1., 2., 3.]
-g_fls = hcat([fls(t, k, C.s, r.b, H, D) for k in ks]...)
+#g_fls = hcat([fls(t, k, C.s, r.b, H, D) for k in ks[1:3]]...)
+g_fls = Matrix{Float64}(undef, length(t), length(unique(s)))
+for (i, j) in enumerate(ind_unique)
+    g_fls[:, i] = fls(t, V1[j], C.s, r.b, V2[j], D)
+end
 
 # Non-stationary convolution
-dT = convolution_ns(Q, g_fls, ind, s)
+@time dT3 = convolution_ns(q, g_fls, ind, s)
 
 f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
 ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = "g-function (-)", xscale = log10)
-for i in 1:3
+for i in 1:length(unique(s))
     lines!(ax, t, g_fls[:, i], color = col[i], linewidth = 1.5)
 end
-ax = Axis(f[2, 1], xlabel = L"$t$ (s)", ylabel = "dT (°C)", xscale = log10)
-lines!(ax, t, dT, color = :black, linewidth = 1.5)
+ax = Axis(f[2, 1], xlabel = L"$t$ (s)", ylabel = "dT (°C)")
+lines!(ax, t, dT3, color = :black, linewidth = 1.5)
 display(f)
+
+#x1 = [8,8,8,8,8,4,4,4,4,4]
+#x2 = [3,3,6,6,7,7,9,9,1,1]

@@ -1,16 +1,6 @@
 using FFTW
 FFTW.set_num_threads(Sys.CPU_THREADS)
 
-# Dictionary to cache FFT plans by length
-const FFT_PLANS = Dict{Int, FFTW.rFFTWPlan{Float64, true, 1}}()
-
-# Helper to get or create a plan for a given length
-function get_fft_plan(len::Int)
-    get!(FFT_PLANS, len) do
-        plan_rfft(zeros(len))
-    end
-end
-
 function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}}) where {T<:Real}
     """
         convolution(f, g)
@@ -24,17 +14,16 @@ function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}
         - Convolved signal
     """
     n = length(f)
-    total_length = 2 * n - 1
-    optimal_length = nextprod([2, 3, 5, 7], total_length)
+    pad = nextpow(2, 2 * n - 1)
 
     # Preallocate arrays
-    f_pad = zeros(T, optimal_length)
-    g_pad = zeros(T, optimal_length)
+    f_pad = zeros(T, pad)
+    g_pad = zeros(T, pad)
     copyto!(f_pad, f)
     copyto!(g_pad, g)
 
     # Precompute FFT plans
-    #fft_plan = get_fft_plan(optimal_length)
+    #fft_plan = get_fft_plan(pad)
     fft_plan = plan_rfft(f_pad)
 
     # Compute FFTs
@@ -45,7 +34,7 @@ function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}
     F_fg = F_f .* F_g
 
     # Inverse FFT to get convolution results
-    y = irfft(F_fg, optimal_length)[1:n]
+    y = irfft(F_fg, pad)[1:n]
     return y
 end
 
@@ -77,32 +66,38 @@ function state_transitions(vectors::AbstractArray...)
     mat = hcat(vectors...)
 
     # Find index for each row
-    #index = indexin(eachrow(mat), unique(eachrow(mat)))
-    rows = collect(eachrow(mat))
-    index = map(r -> findfirst(isequal(r), unique(rows)), rows)
+    rows = unique(eachrow(mat))
+    # index = map(r -> findfirst(isequal(r), unique(rows)), rows)
+    dict = Dict{typeof(rows[1]), Int}()
+    for (i, r) in enumerate(rows)
+        dict[r] = i
+    end
+    index = [dict[r] for r in eachrow(mat)]
 
-    # Find indices of changes and state value
+    # Find indices of changes and state value and indice of unique state changes for g-function
     change = diff(index) .!= 0
-    ind = findall(change) .- 1
+    #ind = findall(change) .- 1
+    ind = findall(change)
     state = index[[true; change]]
+    ind_unique = unique(i -> index[i], eachindex(index))
     
-    return ind, state
+    return [1; ind], state, ind_unique
 end
 
-function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T}, ind::AbstractVector{T}, 
-    s::AbstractVector{T}) where {T <: Real}
+function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T}, ind::AbstractVector{<: Integer}, 
+    s::AbstractVector{<: Integer}) where {T <: AbstractFloat}
     """
         convolution_ns(Q, g, ind, s)
 
     Function that performs a non-stationary convolution based on varying operating conditions in the
     simulation of GHE. This script follows the implementation of Beaudry et al (2024).
     Inputs:
-        - Q: Thermal load vector (nₜ x 1) [W or W/m or °C]
-        - g: Set of transfer functions (nₜ x nₛ) [°C/W °Cm/W, -]
-        - ind: Time vector of state transition (nₜ x 1) [-]
-        - s: State index (nₜ x 1) [-]
+        - Q: Thermal load vector (nt x 1) [W, W/m, °C]
+        - g: Set of transfer functions (nt x ns) [°C/W, °Cm/W, -]
+        - ind: Time vector of state transition (ns-1 x 1) [-]
+        - s: State index (ns x 1) [-]
     Outputs:
-        - T: Temperature vector (nₜ x 1)
+        - T: Temperature vector (nt x 1)
     Reference:
         Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental
         validation of non-stationary convolutions for the fast simulation of time-variant flowrates
@@ -111,49 +106,54 @@ function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T}, ind::Abstract
     """
     # Basic inputs
     n = length(Q)
-    index_count = diff([0; ind; n])
+    #index_count = diff([0; ind; n])
+    index_count = diff([ind; n + 1])
     
     # Repeat each state index by corresponding count
-    state_vec = repeat(s, inner=index_count)
-    
-    
+    #state_vec = vcat([repeat(s, inner = index_count[i]) for i in eachindex(s)]...)
+    state_vec = vcat([fill(s[i], index_count[i]) for i in eachindex(s)]...)
+
     # Initialize Q_mu, size n × size(g,2)
-    Q_mu = zeros(eltype(Q), n, size(g, 2))
+    Q_s = zeros(T, n, size(g, 2))
     
-    # Assign Q elements to Q_mu according to state_vec
+    # Assign Q elements to Q_s according to state_vec
     for i in 1:size(g, 2)
-        inds = findall(state_vec .== i)
-        Q_mu[inds, i] = Q[inds]
+        indt = findall(state_vec .== i)
+        Q_s[indt, i] = Q[indt]
     end
 
-    # Compute f_mu as difference along rows, with first row the same as Q_mu(1,:)
-    f_mu = vcat(Q_mu[1:1, :], diff(Q_mu, dims=1))
+    # Compute f_s as difference along rows, with first row the same as Q_s(1,:)
+    f_s = vcat(Q_s[1:1, :], diff(Q_s, dims=1))
 
-    # Compute zero-padding length (twice n, rounded up to nextprod of [2,3,5,7])
-    pad0 = 2 * n
-    pad0_opt = nextprod([2, 3, 5, 7], pad0)
+    # Compute zero-padding length
+    pad = nextpow(2, 2 * n - 1)
 
     # Prepare padded arrays for fft
-    f_pad = zeros(eltype(Q_mu), pad0_opt, size(g, 2))
-    g_pad = zeros(eltype(g), pad0_opt, size(g, 2))
+    f_pad = zeros(T, pad, size(g, 2))
+    g_pad = zeros(T, pad, size(g, 2))
 
     # Copy data into padded arrays
-    f_pad[1:n, :] .= f_mu
+    f_pad[1:n, :] .= f_s
     g_pad[1:size(g, 1), :] .= g
+    #copyto!(f_pad, f_s)
+    #copyto!(g_pad, g)
     
-    # Perform FFTs along columns (dim 1)
-    F_f = fft.(eachcol(f_pad))
-    F_g = fft.(eachcol(g_pad))
+    # Perform FFTs along columns
+    #F_f = rfft.(eachcol(f_pad))
+    #F_g = rfft.(eachcol(g_pad))
+    fft_plan = plan_rfft.(eachcol(f_pad))
+    F_f = fft_plan .* eachcol(f_pad)
+    F_g = fft_plan .* eachcol(g_pad)
     
     # Element-wise multiply FFTs and inverse FFT the results
-    H_cols = map((Ff, Fg) -> ifft(Ff .* Fg), F_f, F_g)
+    H_cols = map((Ff, Fg) -> irfft(Ff .* Fg, pad)[1:n], F_f, F_g)
     
     # Convert the vector of vectors back to matrix, each column is the result
     H = hcat(H_cols...)
 
     # Sum over the first n rows, along columns (dim=2), results in vector length n
-    dT_NSC_COR = sum(H[1:n, :], dims=2)
+    dT = sum(H[1:n, :], dims=2)
 
     # Return the result as a vector
-    return vec(dT_NSC_COR)
+    return vec(dT)
 end
