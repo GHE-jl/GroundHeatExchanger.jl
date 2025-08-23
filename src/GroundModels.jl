@@ -83,7 +83,7 @@ end
 function fls(t::Union{T, AbstractVector{T}}, ks::T, Cs::T, rb::T, H::T, D::T
     ) where {T <: AbstractFloat}
     """
-        fls(t, ks, Cs, rb. H, D)
+        fls(t, ks, Cs, rb, H, D)
 
     Computes the finite line source (FLS) model based on Claesson and Javed (2011). The output is a 
     g-function that requires a heat load per unit of borehole length [W/m] to provide the borehole

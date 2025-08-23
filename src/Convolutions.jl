@@ -1,5 +1,6 @@
 using FFTW
 FFTW.set_num_threads(Sys.CPU_THREADS)
+using Clustering
 
 function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}}) where {T<:Real}
     """
@@ -14,16 +15,17 @@ function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}
         - Convolved signal
     """
     n = length(f)
-    pad = nextpow(2, 2 * n - 1)
+    pad = 2 * n - 1
 
     # Preallocate arrays
     f_pad = zeros(T, pad)
     g_pad = zeros(T, pad)
-    copyto!(f_pad, f)
-    copyto!(g_pad, g)
+    #copyto!(f_pad, f)
+    #copyto!(g_pad, g)
+    f_pad[1:n, :] .= f
+    g_pad[1:n, :] .= g
 
     # Precompute FFT plans
-    #fft_plan = get_fft_plan(pad)
     fft_plan = plan_rfft(f_pad)
 
     # Compute FFTs
@@ -36,6 +38,32 @@ function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}
     # Inverse FFT to get convolution results
     y = irfft(F_fg, pad)[1:n]
     return y
+end
+
+function step_signal(x::AbstractVector{AbstractFloat}, steps::Integer)
+    """
+        step_signal(x, steps)
+    
+    Function that separated a vector signal "x" in n number of constant steps. This applies mainly
+    to help interprete noisy signal into constant values based on average abrupt changes.
+    Note: The k-means algorithm used to idenfity the changes can be unstable when too few steps are
+    used.
+    Inputs:
+        - x: A vector
+        - steps: The number of constant steps wanted in the output step-constant signal
+    Output:
+        - A step-constant signal
+    """
+    # Find group of same data using a k-mean cluster algorithm from Clustering.jl
+    x_mat = reshape(x, 1, :)
+    result = kmeans(x_mat, steps)
+    #result = kmedoids(x_mat, steps)
+
+    # Compute mean for each cluster
+    means = [mean(x[result.assignments .== k]) for k in 1:steps]
+
+    # Assign each value its cluster's mean
+    return means[result.assignments]
 end
 
 function state_transitions(vectors::AbstractArray...)
@@ -106,11 +134,9 @@ function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T}, ind::Abstract
     """
     # Basic inputs
     n = length(Q)
-    #index_count = diff([0; ind; n])
     index_count = diff([ind; n + 1])
     
     # Repeat each state index by corresponding count
-    #state_vec = vcat([repeat(s, inner = index_count[i]) for i in eachindex(s)]...)
     state_vec = vcat([fill(s[i], index_count[i]) for i in eachindex(s)]...)
 
     # Initialize Q_mu, size n × size(g,2)
@@ -126,7 +152,7 @@ function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T}, ind::Abstract
     f_s = vcat(Q_s[1:1, :], diff(Q_s, dims=1))
 
     # Compute zero-padding length
-    pad = nextpow(2, 2 * n - 1)
+    pad = 2 * n - 1
 
     # Prepare padded arrays for fft
     f_pad = zeros(T, pad, size(g, 2))
