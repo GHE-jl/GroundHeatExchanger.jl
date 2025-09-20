@@ -27,7 +27,7 @@ export ils, ics, fls, ilsβ
 export mfls_single_borehole, mfls_borefield_I
 
 # Spatial superposition export
-export GHE_param, gfunc_matrix, bloc_matrix, successive_flux
+export borefield_radius, g_matrix, bloc_matrix, successive_flux
 
 # Thermal resistance export
 export R_f,

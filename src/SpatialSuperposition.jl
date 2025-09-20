@@ -6,45 +6,41 @@ exchanger (BHE) to form a ground heat exchanger (GHE). Current methods are:
 """
 
 using LinearAlgebra
+using PCHIPInterpolation
 
-include("Utilities.jl")
+#include("Utilities.jl")
 
-struct GHEParam
+function borefield_radius(xy::Matrix{T}, rb::T) where T<:Real
     """
-    Structure including all parameters required to simulate a GHE response.
+        borefield_radius(xy)
+    
+    Function that computes a radius matrix, vector, unique values and indices of a borefield given
+    the coordinates of each borehole.
+    Inputs:
+        - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
+            E.g.: [0 0] (to have a matrix input).
+        - rb: Borehole radius (1x1) [m]
+    Output:
+        - r: Radius of the borefield (1x1) [m]
     """
-    t::Union{T,AbstractVector{T}} where T<:Real # Time range [s]
-    H::Float64              # Borehole depth [m]
-    D::Float64              # Borehole buried depth [m]
-    s::Float64              # Shank spacing (s/2 is the half-shank spacing) [m]
-    rb::Float64             # Borehole radius [m]
-    ri::Float64             # Pipe inlet radius [m]
-    ro::Float64             # Pipe outlet radius [m]
-    ks::Float64             # Ground thermal conductivity [W/m-K]
-    kg::Float64             # Grout thermal conductivity [W/m-K]
-    kp::Float64             # Pipe thermal conductivity [W/m-K]
-    kf::Float64             # Fluid thermal conductivity [W/m-K]
-    Cs::Float64             # Ground volumetric specific heat [J/m³-K]
-    Cg::Float64             # Grout volumetric specific heat [J/m³-K]
-    Cp::Float64             # Pipe volumetric specific heat [J/m³-K]
-    Cf::Float64             # Fluid volumetric specific heat [J/m³-K]
-    ρs::Float64             # Groud density [kg/m³]
-    ρg::Float64             # Grout density [kg/m³]
-    ρp::Float64             # Pipe density [kg/m³]
-    ρf::Float64             # Fluid density [kg/m³]
-    V::Float64              # Circulating flow rate [m³/s]
-    vD::Float64             # Groundwater flow [m/s]
-    xy::Matrix{Float64}     # Coordinates of a borefield (unused for single borehole) [m, m]
+    nb = size(xy, 1)    # Number of boreholes
+    r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
+    r = r + Diagonal(rb * ones(nb))
+    rᵥ = reshape(r, nb * nb)
+    rᵤ = unique(rᵥ)
+    rᵢ = indexin(rᵥ, rᵤ)
+    return r, rᵥ, rᵤ, rᵢ, nb
 end
 
-function gfunc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T, xy::Matrix{T},
-    model::String) where T<:Real
+function g_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T, xy::Matrix{T},
+    ) where T<:Real
     """
-        gfunc_matrix(t, ks, Cs, rb ,H, D, xy, model)
+        g_matrix(t, ks, Cs, rb ,H, D, xy)
     
     Function creating a matrix named "gg" that has dimensions [nt x nr], where nt is the length of 
     time steps and nr is the number of radius for the borefield. The matrix can subsequently be used
-    in spatial superposition, such as with the function `bloc_matrix()` from this file.
+    in spatial superposition, such as with the functions `bloc_matrix()` or `successive_flux()` from
+    this file.
     Inputs:
         - t: Time vector (nt x 1) [s]
         - ks: Soil thermal conductivity (1x1) [W/mK]
@@ -53,37 +49,19 @@ function gfunc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, 
         - H: Borehole depth (1x1) [m]
         - D: Borehole burried depth (1x1) [m]
         - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
-        - model: Name of the numerical model used to generate the interpolant [string]
     Output:
-        - gg: A matrix of g-function computed at different time and radius (nt x nr) [-]
+        - gₘ: A matrix of g-function computed at different time and radius (nt x nr) [-]
     """
-
-    # Set time steps
-    if length(t) > 100
-        s = set_nodes(length(t), 100)  # Set 100 nodes to define the time series
-        t = t[s]
-    else
-        t = t
-    end
-    nt = length(t)
-
     # Evaluate a matrix of radius
-    nb = size(xy, 1)    # Number of boreholes
-    r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
-    r = r + Diagonal(rb * ones(nb))
-    rᵥ = reshape(r, nb * nb)
-    rᵤ = unique(rᵥ)
+    ~, ~, rᵤ, ~ = borefield_radius(xy, rb)
 
     # Compute temperature array depending on the model specified
-    gg = Matrix{Float64}(undef, nt, length(rᵤ))
+    gₘ = Matrix{Float64}(undef, length(t), length(rᵤ))
 
-    if model == "fls" || "FLS"
-        # Compute the model for each radius
-        for i in eachindex(rᵤ)
-            gg[:, i] = fls(t, ks, Cs, rᵤ[i], H, D)
-        end
-    end
-    return gg, t
+    for i in eachindex(rᵤ)
+        gₘ[:, i] = fls(t, ks, Cs, rᵤ[i], H, D)
+    end    
+    return gₘ
 end
 
 function bloc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T,
@@ -111,24 +89,20 @@ function bloc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D
         g-function construction. Renewable Energy, 121, 249–260. 
         https://doi.org/10.1016/j.renene.2017.12.092
     """
-    
-    # Compute the ground model for all different radius of the borefield
-    gₘ, tₘ = gfunc_matrix(t, ks, Cs, rb ,H, D, xy, "fls")
-
     # Basic parameters
-    nt = length(tₘ)
-    nb = size(xy, 1)    # Number of boreholes
+    nt = length(t)
+    ~, rᵥ, ~, rᵢ, nb = borefield_radius(xy, rb)
 
-    # Evaluate a matrix of radius
-    r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
-    r = r + Diagonal(rb * ones(nb))
-    rᵥ = reshape(r, nb * nb)
-    rᵤ = unique(rᵥ)
-    rᵢ = indexin(rᵥ, rᵤ)
+    # Compute the ground model for all different radius of the borefield
+    gₘ = Matrix{Float64}(undef, length(t), length(rᵤ))
+    for i in eachindex(rᵤ)
+        gₘ[:, i] = fls(t, ks, Cs, rᵤ[i], H, D)
+    end
+    #gₘ = g_matrix(t, ks, Cs, rb ,H, D, xy)
 
     # Compute temperature array depending on the model specified
-    gg = Matrix{Float64}(undef, length(rᵥ), nt)
-    gg = gₘ[:, rᵢ]'
+    #gg = Matrix{Float64}(undef, length(rᵥ), nt)
+    #gg = gₘ[:, rᵢ]'
 
     # Building the convolution matrix
     gᵢ = zeros(nt, nb, nb)
@@ -137,7 +111,8 @@ function bloc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D
     for i in 1:nt
         for j in 1:nt
             if i <= j
-                gᵢ[j, :, :] = reshape(gg[:, j], (1, nb, nb))
+                # gᵢ[j, :, :] = reshape(gg[:, j], (1, nb, nb))
+                gᵢ[j, :, :] = reshape(gₘ[:, j], (1, nb, nb))
             end
         end
 
@@ -158,11 +133,7 @@ function bloc_matrix(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D
     g = Gₕ \ b
 
     # Output the transfer function
-    if length(t) > 100
-        return pchip_interpolation(tₘ, -g[nb*nt+1:end], t)
-    else
-        return -g[nb*nt+1:end]
-    end
+    return -g[nb*nt+1:end]
 end
 
 function successive_flux(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::T, D::T,
@@ -189,141 +160,62 @@ function successive_flux(t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T ,H::
         construction of small to large-scale ground heat exchanger. Renewable Energy, 165, 359–368. 
         https://doi.org/10.1016/j.renene.2020.10.074
     """
-
     # Basic parameters
-    #nt = length(t)      # Number of time steps
+    nt = length(t)      # Number of time steps
     nb = size(xy, 1)    # Number of boreholes
+    pad = 2 * nt - 1    # Padding for FFT
+    r, rᵥ, rᵤ, rᵢ, nb = borefield_radius(xy, rb)
 
-    tspan = range(log10(60.), log10(3600. * 24*365*100), length=100)
-    rspan = range(log10(rb), log10(100), 100)
-
-    gₘ, tₘ = gfunc_matrix(t, ks, Cs, rb ,H, D, xy, "fls")
-    #for ii in 1:length(rspan)
-
-
-    # Evaluate a matrix of radius
-    r = sqrt.(sum(abs2, xy, dims=2) .+ sum(abs2, xy, dims=2)' .- 2 * (xy * xy'))
-    r = r + Diagonal(rb * ones(nb))
-    rᵥ = reshape(r, nb * nb)
-    rᵤ = unique(rᵥ)
-    rᵢ = indexin(rᵥ, rᵤ)
-
-    g_int = Interpolator(t, g)
-
-    # Define constants
-    tfinal = t[end]
-    nt_hour = 24
-    nt_day = 30
-    nt_month = 12
-    nt_year = 10
-
-    # Determine nt_decade
-    if tfinal / 3600 / 8760 / 10 > 2
-        nt_decade = ceil(Int, tfinal / 3600 / 8760 / 10)
-    else
-        nt_decade = 2
+    # Creating an interpolator if there is either too many time steps or boreholes
+    nt > 100 ? t_ = exp10.(range(log10(60.), log10(3600. * 24*365*100), length=100)) : t_ = t
+    nb > 100 ? r_ = exp10.(range(log10(rb), log10(100), 100)) : r_ = rᵤ
+    
+    # Compute the ground model for all different radius of the borefield
+    gₘ = Matrix{Float64}(undef, length(t_), length(r_))
+    for i in eachindex(rᵤ)
+        gₘ[:, i] = fls(t_, ks, Cs, r_[i], H, D)
     end
+    #g_int = Interpolator(t, gₘ)
+    #gₘ = g_matrix(t, ks, Cs, rb ,H, D, xy)
 
-    # Time spans
-    tspan_hour = range(3600, step=3600, length=nt_hour)
-    tspan_day = tspan_hour[end] .* range(1, step=1, length=nt_day)
-    tspan_month = tspan_day[end] .* range(1, step=1, length=nt_month)
-    tspan_year = tspan_month[end] .* range(1, step=1, length=nt_year)
-    tspan_decade = tspan_year[end] .* range(1, step=1, length=nt_decade)
-
-    # Combine time spans into a single array
-    tspan_temp = vcat(
-        tspan_hour,
-        tspan_day[2:end],
-        tspan_month[2:end],
-        tspan_year[2:end],
-        tspan_decade[2:end]
-    )
-
-    # Hour calculations
-    Temp = gFLS_int(repeat(rr, inner=(1, nt_hour)), repeat(tspan_hour, outer=(length(rr), 1)))
-    Gg_hour = reshape(Temp[Ind_c, :]', (nt_hour, n, n))
-    G_hour = permutedims(Gg_hour, (2, 3, 1)) # vector k
-    g_hour = permutedims(Gg_hour, (3, 1, 2)) # vector j
-
-    # Day calculations
-    Temp = gFLS_int(repeat(rr, inner=(1, nt_day)), repeat(tspan_day, outer=(length(rr), 1)))
-    Gg_day = reshape(Temp[Ind_c, :]', (nt_day, n, n))
-    G_day = permutedims(Gg_day, (2, 3, 1)) # vector k
-    g_day = permutedims(Gg_day, (3, 1, 2)) # vector j
-
-    # Month calculations
-    Temp = gFLS_int(repeat(rr, inner=(1, nt_month)), repeat(tspan_month, outer=(length(rr), 1)))
-    Gg_month = reshape(Temp[Ind_c, :]', (nt_month, n, n))
-    G_month = permutedims(Gg_month, (2, 3, 1)) # vector k
-    g_month = permutedims(Gg_month, (3, 1, 2)) # vector j
-
-    # Year calculations
-    Temp = gFLS_int(repeat(rr, inner=(1, nt_year)), repeat(tspan_year, outer=(length(rr), 1)))
-    Gg_year = reshape(Temp[Ind_c, :]', (nt_year, n, n))
-    G_year = permutedims(Gg_year, (2, 3, 1)) # vector k
-    g_year = permutedims(Gg_year, (3, 1, 2)) # vector j
-
-    # Decade calculations
-    Temp = gFLS_int(repeat(rr, inner=(1, nt_decade)), repeat(tspan_decade, outer=(length(rr), 1)))
-    Gg_decade = reshape(Temp[Ind_c, :]', (nt_year, n, n))
-    G_decade = permutedims(Gg_decade, (2, 3, 1)) # vector k
-    g_decade = permutedims(Gg_decade, (3, 1, 2)) # vector j
+    # Setup matrices for successive flux
+    #Temp = gFLS_int(repeat(rr, inner=(1, nt_hour)), repeat(tspan_hour, outer=(length(rr), 1)))
+    Gg = reshape(gₘ, (nt, nb, nb))
+    G = permutedims(Gg, (2, 3, 1)) # vector k
+    g = permutedims(Gg, (3, 1, 2)) # vector j
 
     # Call gfunc for different time spans
-    x_hour, _ = gfunc(tspan_hour, G_hour, g_hour)
-    x_day, _ = gfunc(tspan_day, G_day, g_day)
-    x_month, _ = gfunc(tspan_month, G_month, g_month)
-    x_year, _ = gfunc(tspan_year, G_year, g_year)
-    x_decade, _ = gfunc(tspan_decade, G_decade, g_decade)
-
-    # Combine results
-    g_temp = vcat(
-        x_hour[:, end],
-        x_day[2:end, end],
-        x_month[2:end, end],
-        x_year[2:end, end],
-        x_decade[2:end, end]
-    )
-
-    gₛ = pchip_interpolation(tspan_temp, -g_temp, tspan)
-    return gₛ
-end
-
-function successibe_assembly(t::Union{T,AbstractVector{T}}, G, g) where T<:Real
-    """
-    Function that assemble the successive flux of Nguyen and Pasquier (2021). Used in the 
-    `successive_flux` function from this file.
-    """
-    nt = length(t)
     n = size(G, 1)
 
+    # Initialize the matrices
     GG = zeros(n + 1, n + 1, nt)
     GG[1:n, 1:n, :] .= G
     GG[n+1, 1:n, :] .= 1
     GG[1:n, n+1, :] .= 1
 
+    # Solve the linear system
     b = [zeros(n); 1]
     x = zeros(nt, n + 1)
     for i in 1:nt
         x[i, :] = GG[:, :, i] \ b
     end
 
-    pad0 = 2 * nt
-    if log2(nt) < 16
+    #=if log2(nt) < 16
         p = ceil(Int, log2(pad0))
         pad0 = 2^p
-    end
-    g_fft = fft([g; pad0], 2)
+    end=#
+    g_fft = fft([g; pad], 2)
 
+    # Set convergence criteria
     err_1 = 10.0
     err_2 = Inf
     rel_err = Inf
     k = 0
 
+    # Iteratively solve the system
     while rel_err > 0.15 && err_1 > 1e-3 && err_1 < err_2
         f = [x[1, 1:n]'; diff(x[:, 1:n], dims=1)']
-        h = ifft(fft([f; pad0], 2) .* g_fft, 2)
+        h = ifft(fft([f; pad], 2) .* g_fft, 2)
         hh = sum(h, dims=1)
 
         Tf = hh[1:nt, :]
@@ -339,7 +231,6 @@ function successibe_assembly(t::Union{T,AbstractVector{T}}, G, g) where T<:Real
         err_1 = err
     end
 
-    x[:, n+1] .= -mTf
-
-    return x, nothing  # 'l' is not used in the function, so we return nothing
+    x[:, n + 1] .= mTf
+    return x
 end

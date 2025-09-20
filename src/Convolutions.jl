@@ -40,7 +40,7 @@ function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}
     return y
 end
 
-function step_signal(x::AbstractVector{AbstractFloat}, steps::Integer)
+function step_signal(x::AbstractVector, steps::Integer)
     """
         step_signal(x, steps)
     
@@ -55,15 +55,15 @@ function step_signal(x::AbstractVector{AbstractFloat}, steps::Integer)
         - A step-constant signal
     """
     # Find group of same data using a k-mean cluster algorithm from Clustering.jl
-    x_mat = reshape(x, 1, :)
-    result = kmeans(x_mat, steps)
+    x_mat = reshape(x, 1, :)        # Convert to a 1 x n matrix
+    res = kmeans(x_mat, steps)
     #result = kmedoids(x_mat, steps)
 
     # Compute mean for each cluster
-    means = [mean(x[result.assignments .== k]) for k in 1:steps]
+    means = [sum(x[res.assignments .== k]) / length(x[res.assignments .== k]) for k in 1:steps]
 
     # Assign each value its cluster's mean
-    return means[result.assignments]
+    return means[res.assignments]
 end
 
 function state_transitions(vectors::AbstractArray...)

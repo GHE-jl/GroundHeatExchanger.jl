@@ -12,9 +12,9 @@ update_fig_theme()
 col = fig_color()
 
 # Define paremeters
-#t = collect(range(3600.0, 3600.0*24*365*100, step=3600))                       # Time (lin)
-#ᵢ = set_nodes(length(t), 150)                                                   # Nodes
-t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 5000))) # Time (log)
+#t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
+#s = set_nodes(length(t), 150)                                                       # Nodes
+t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))          # Time (log)
 H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
@@ -34,25 +34,28 @@ C = (s = 2.11e6,                # Ground volumetric specific heat
     p = 1000.0,                 # Pipe density
     f = 1000.0)                 # Fluid density
 V = 30.0 / 60000                # Circulating flow rate
-vD = 1e-9                       # Groundwater flow
+vD = 1e-7                       # Groundwater flow
 #Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
 
 # Spatial superposition with bloc matrix
-nx, ny, B = 1, 1, 5.
+#=nx, ny, B = 1, 1, 5.
 xy1 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_1 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy1)
+@time g_fls_1_direct = fls(t, k.s, C.s, r.b, H, D)
+@time g_fls_1_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy1)=#
 
-nx, ny, B = 2, 2, 5.
+#=nx, ny, B = 2, 2, 5.
 xy2 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_2 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy2)
-#@time g_fls_2 = successive_flux()
+@time g_fls_2_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy2)=#
 
 nx, ny, B = 5, 5, 5.
 xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_3 = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
+@time g_fls_3_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
+@time g_fls_3_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy3)
 
 # Figure
 f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
-ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = "g (-)", xscale = log10)
-lines!(ax, t, g_fls_3 * 2 * π * k.s * size(xy3, 1), color = col[1])
-display(f);
+ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = L"$g$ (°Cm/W)", xscale = log10)
+lines!(ax, t, g_fls_3_bm, color = col[1], linestyle = :solid, label = "Bloc matrix")
+lines!(ax, t, g_fls_3_sf, color = col[2], linestyle = :dash, label = "Successive flux")
+axislegend(ax, position = :lt)
+display(f)

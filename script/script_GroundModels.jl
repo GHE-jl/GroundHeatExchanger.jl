@@ -8,6 +8,7 @@ using CairoMakie
 includet("../src/GHEModels.jl")
 includet("../src/FigOptions.jl")
 update_fig_theme()
+col = fig_color()
 
 # Define paremeters
 #t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
@@ -44,7 +45,6 @@ vD = 1e-7                       # Groundwater flow
 
 #ghe_model(t, k.s, C.s, r.b, H, D, [0.0 0.0])
 
-col = fig_color()
 t̃ = t / (3600 * 24 * 365)
 f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
 ax = Axis(f[1, 1], xlabel = "Time (yr)", ylabel = "g-function (-)", xscale = log10)
