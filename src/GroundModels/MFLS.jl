@@ -1,32 +1,31 @@
-using SpecialFunctions
-using QuadGK
+using SpecialFunctions: besseli
+using QuadGK: quadgk
 
+"""
+    mfls(t, ks, Cs, rb, H, D, vD)
+    mfls(t, ks, Cs, rb, H, D, vD, xy)
 
-function mfls_single_borehole(
-        t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T, H::T, D::T, vD::T) where {T <: Real}
-    """
-        mfl_single_borehole(t, ks, Cs, rb, H, D, vD, xy)
-
-    Compute the moving finite line source (MFLS) model of Guo et al. 2021, which integrates the 
-    buried depth and groundwater flow (with direction).The output is a g-function that requires a
-    heat load per unit of borehole length [W/m] to provide the borehole wall temperature.
-    Inputs:
-        - t: Time vector [s]
-        - ks: Ground thermal conductivity [W/mK]
-        - Cs: Ground volumetric specific heat [J/m³K]
-        - rb: Borehole radius [m]
-        - H: Borehole depth [m]
-        - D: Buried depth [m]
-        - vD: Uniform Darcy velocity [m/s]
-        - xy: Matrix of borehole coordinates [nb x 2], where nb is the number of borehole.
-    Output:
-        - g: A g-function corresponding to the borehole wall temperature of the borehole [-]
-    Reference:
+Compute the moving finite line source (MFLS) model of Guo et al. 2021, which integrates the 
+buried depth and groundwater flow (with direction).The output is a g-function that requires a
+heat load per unit of borehole length [W/m] to provide the borehole wall temperature.
+# Arguments
+    - t: Time vector [s]
+    - ks: Ground thermal conductivity [W/mK]
+    - Cs: Ground volumetric specific heat [J/m³K]
+    - rb: Borehole radius [m]
+    - H: Borehole depth [m]
+    - D: Buried depth [m]
+    - vD: Uniform Darcy velocity [m/s]
+    - xy: Matrix of borehole coordinates [nb x 2], where nb is the number of borehole.
+# Output
+    - g: A g-function corresponding to the borehole wall temperature of the borehole [°Cm/W]
+# Reference
     Guo, Y., Hu, X., Banks, J., & Liu, W. V. (2020). Considering buried depth in the moving finite 
     line source model for vertical borehole heat exchangers—A new solution. Energy and Buildings, 
     214, 109859. https://doi.org/10.1016/j.enbuild.2020.109859
-    """
-
+"""
+function mfls(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb::Real,
+    H::Real, D::Real, vD::Real)
     # Set initial parameters
     nt = length(t)                          # Number of element in the time vector
     g = zeros(nt)                           # Preallocation of the borehole wall temperature
@@ -51,32 +50,8 @@ function mfls_single_borehole(
     return g * I₀ / (4 * π * ks)
 end
 
-function mfls_borefield_I(
-        t::Union{T,AbstractVector{T}}, ks::T, Cs::T, rb::T, H::T, D::T, vD::T,
-        xy::Matrix) where {T <: Real}
-    """
-        mfls_borefield_I(t, ks, Cs, rb, H, D, vD, xy)
-
-    Compute the moving finite line source (MFLS) model of Guo et al. 2021, which integrates the 
-    buried depth and groundwater flow (with direction).The output is a g-function that requires a
-    heat load per unit of borehole length [W/m] to provide the borehole wall temperature.
-    Inputs:
-        - t: Time vector [s]
-        - ks: Ground thermal conductivity [W/mK]
-        - Cs: Ground volumetric specific heat [J/m³K]
-        - rb: Borehole radius [m]
-        - H: Borehole depth [m]
-        - D: Buried depth [m]
-        - vD: Uniform Darcy velocity [m/s]
-        - xy: Matrix of borehole coordinates [nb x 2], where nb is the number of borehole.
-    Output:
-        - g: A g-function corresponding to the borehole wall temperature of the borehole [-]
-    Reference:
-    Guo, Y., Hu, X., Banks, J., & Liu, W. V. (2021). Considering buried depth for vertical borehole 
-    heat exchangers in a borehole field with groundwater flow—An extended solution. Energy and 
-    Buildings, 235, 110722. https://doi.org/10.1016/j.enbuild.2021.110722
-    """
-
+function mfls(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb::Real, H::Real,
+    D::Real, vD::Real, xy::Matrix)
     # Set initial parameters
     nt = length(t)                          # Number of element in the time vector
     nb = size(xy, 1)                        # Number of boreholes
@@ -95,7 +70,6 @@ function mfls_borefield_I(
     I₀ = besseli(0, Rᵦ * Pe / 2)            # Modified Bessel of the first kind with zero-order
 
     # Compute ΔX and R and ϕ for the spatial superposition
-    
     ΔX = zeros(nb, nb)
     R = similar(ΔX)
     ϕ = similar(ΔX)
@@ -145,21 +119,22 @@ function mfls_borefield_I(
     return (gᵢ .+ gᵢⱼ) ./ (nb)
 end
 
-function ierf(x::T) where {T <: AbstractFloat}
-    """
-        ierf(x)
-       
-    Inverse "erf" function used in the FLS model
-    """
+"""
+    ierf_mfls(x)
+    
+Inverse "erf" function used in the mFLS model
+"""
+function ierf_mfls(x::Real)
+
     return x * erf(x) - 1 / sqrt(π) * (1 - exp(-x^2))
 end
 
-function integrand_mfls(s::T, d::T) where {T <: AbstractFloat}
-    """
-        integrand_fls(s, d)
+"""
+    integrand_fls(s, d)
 
-    Integrand of the FLS model. Assumes constant heat flux boundary condition.
-    """
-    return (2 * ierf(s) + 2 * ierf(s + 2 * d * s) - ierf(2 * s + 2 * d * s) -
-            ierf(2 * d * s))
+Integrand of the mFLS model. Assumes constant heat flux boundary condition.
+"""
+function integrand_mfls(s::Real, d::Real)
+    return (2 * ierf_mfls(s) + 2 * ierf_mfls(s + 2 * d * s) - ierf_mfls(2 * s + 2 * d * s) -
+            ierf_mfls(2 * d * s))
 end

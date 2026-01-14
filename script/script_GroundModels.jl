@@ -6,9 +6,7 @@ using BenchmarkTools
 using CairoMakie
 
 includet("../src/GHEModels.jl")
-includet("../src/FigOptions.jl")
-update_fig_theme()
-col = fig_color()
+using .GHEModels
 
 # Define paremeters
 #t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
@@ -40,18 +38,16 @@ vD = 1e-7                       # Groundwater flow
 @time g_ils = ils(t, k.s, C.s, r.b)
 @time g_ics = ics(t, k.s, C.s, r.b)
 @time g_fls = fls(t, k.s, C.s, r.b, H, D)
-@time g_mfls = mfls_single_borehole(t, k.s, C.s, r.b, H, D, vD)
-@time g_ilsβ = ilsβ(t, k.s, C.s, r.b, H, V, 0.01)
-
-#ghe_model(t, k.s, C.s, r.b, H, D, [0.0 0.0])
+@time g_mfls = mfls(t, k.s, C.s, r.b, H, D, vD)
+@time g_ilsβ = βils(t, k.s, C.s, r.b, H, V, 0.01)
 
 t̃ = t / (3600 * 24 * 365)
 f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
 ax = Axis(f[1, 1], xlabel = "Time (yr)", ylabel = "g-function (-)", xscale = log10)
-lines!(ax, t̃, g_ils, color = col[1], linewidth = 4, label = "ILS")
-lines!(ax, t̃, g_ics, color = col[2], linewidth = 2, label = "ICS")
-lines!(ax, t̃, g_fls, color = col[3], linewidth = 2, label = "FLS")
-lines!(ax, t̃, g_mfls, color = col[4], linewidth = 2, label = "MFLS")
-lines!(ax, t̃, g_ilsβ, color = col[5], linewidth = 2, label = "ILSβ")
+lines!(ax, t̃, g_ils, linewidth = 4, label = "ILS")
+lines!(ax, t̃, g_ics, linewidth = 2, label = "ICS")
+lines!(ax, t̃, g_fls, linewidth = 2, label = "FLS")
+lines!(ax, t̃, g_mfls, linewidth = 2, label = "MFLS")
+lines!(ax, t̃, g_ilsβ, linewidth = 2, label = "βILS")
 axislegend(ax, position = :lt)
 display(f);

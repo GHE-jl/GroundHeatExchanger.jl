@@ -2,24 +2,25 @@ using FFTW
 FFTW.set_num_threads(Sys.CPU_THREADS)
 using Clustering
 
-function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}}) where {T<:Real}
-    """
-        convolution(f, g)
-    
-    Function that solves a convolution product in the spectral domain. Padding is used to
-    avoid circular convolution.
-    Inputs:
-        - f: Incremental load functions (impulse function) (nₜ x 1)
-        - g: Transfer function (or g-function) (nₜ x 1)
-    Output:
-        - Convolved signal
-    """
+"""
+    convolution(f, g)
+
+Function that solves a convolution product in the spectral domain. Padding is used to
+avoid circular convolution.
+# Arguments
+    - f: Incremental load functions (impulse function) (nₜ x 1)
+    - g: Transfer function (or g-function) (nₜ x 1)
+# Output
+    - Convolved signal
+"""
+function convolution(f::Union{Real, AbstractVector{<:Real}}, g::Union{Real, AbstractVector{<:Real}})
+    # Basic inputs
     n = length(f)
     pad = 2 * n - 1
 
     # Preallocate arrays
-    f_pad = zeros(T, pad)
-    g_pad = zeros(T, pad)
+    f_pad = zeros(pad)
+    g_pad = zeros(pad)
     #copyto!(f_pad, f)
     #copyto!(g_pad, g)
     f_pad[1:n, :] .= f
@@ -40,20 +41,21 @@ function convolution(f::Union{T,AbstractVector{T}}, g::Union{T,AbstractVector{T}
     return y
 end
 
-function step_signal(x::AbstractVector, steps::Integer)
-    """
-        step_signal(x, steps)
-    
-    Function that separated a vector signal "x" in n number of constant steps. This applies mainly
-    to help interprete noisy signal into constant values based on average abrupt changes.
-    Note: The k-means algorithm used to idenfity the changes can be unstable when too few steps are
-    used.
-    Inputs:
-        - x: A vector
-        - steps: The number of constant steps wanted in the output step-constant signal
-    Output:
-        - A step-constant signal
-    """
+"""
+    step_signal(x, steps)
+
+# This function should be in a package for thermal response test or experimental data interpretation
+Function that separated a vector signal "x" in n number of constant steps. This applies mainly
+to help interprete noisy signal into constant values based on average abrupt changes.
+Note: The k-means algorithm used to idenfity the changes can be unstable when too few steps are
+used.
+# Arguments
+    - x: A vector
+    - steps: The number of constant steps wanted in the output step-constant signal
+# Output
+    - A step-constant signal
+"""
+function step_signal(x::AbstractVector{<:Real}, steps::Integer)
     # Find group of same data using a k-mean cluster algorithm from Clustering.jl
     x_mat = reshape(x, 1, :)        # Convert to a 1 x n matrix
     res = kmeans(x_mat, steps)
@@ -66,20 +68,20 @@ function step_signal(x::AbstractVector, steps::Integer)
     return means[res.assignments]
 end
 
+"""
+    state_transitions(vectors)
+
+Function that allows to find indices and states changes for vectors of values. Specifically, 
+this function is used in non-stationary operation to identify the operating conditions for all 
+values between either one or a serie of input vectors. The function will identify position of 
+state changes and state index for a set of operating conditions.
+# Arguments
+    - vectors: any number of input vector for all parameter affecting the operating conditions
+# Outputs
+    - ind: Indices of state change on the vectors
+    - s: State index for each segment delimited by the indices
+"""
 function state_transitions(vectors::AbstractArray...)
-    """
-        state_transitions(vectors::AbstractArray...)
-    
-    Function that allows to find indices and states changes for vectors of values. Specifically, 
-    this function is used in non-stationary operation to identify the operating conditions for all 
-    values between either one or a serie of input vectors. The function will identify position of 
-    state changes and state index for a set of operating conditions.
-    Inputs:
-        - vectors: any number of input vector for all parameter affecting the operating conditions
-    Outputs:
-        - ind: Indices of state change on the vectors
-        - s: State index for each segment delimited by the indices
-    """
     # Check to have at least one vector
     n_vector = length(vectors)
     n_vector > 0 || throw(ArgumentError("At least one vector must be provided"))
@@ -95,7 +97,6 @@ function state_transitions(vectors::AbstractArray...)
 
     # Find index for each row
     rows = unique(eachrow(mat))
-    # index = map(r -> findfirst(isequal(r), unique(rows)), rows)
     dict = Dict{typeof(rows[1]), Int}()
     for (i, r) in enumerate(rows)
         dict[r] = i
@@ -104,7 +105,6 @@ function state_transitions(vectors::AbstractArray...)
 
     # Find indices of changes and state value and indice of unique state changes for g-function
     change = diff(index) .!= 0
-    #ind = findall(change) .- 1
     ind = findall(change)
     state = index[[true; change]]
     ind_unique = unique(i -> index[i], eachindex(index))
@@ -112,26 +112,26 @@ function state_transitions(vectors::AbstractArray...)
     return [1; ind], state, ind_unique
 end
 
-function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T}, ind::AbstractVector{<: Integer}, 
-    s::AbstractVector{<: Integer}) where {T <: AbstractFloat}
-    """
-        convolution_ns(Q, g, ind, s)
+"""
+    convolution_ns(Q, g, ind, s)
 
-    Function that performs a non-stationary convolution based on varying operating conditions in the
-    simulation of GHE. This script follows the implementation of Beaudry et al (2024).
-    Inputs:
-        - Q: Thermal load vector (nt x 1) [W, W/m, °C]
-        - g: Set of transfer functions (nt x ns) [°C/W, °Cm/W, -]
-        - ind: Time vector of state transition (ns-1 x 1) [-]
-        - s: State index (ns x 1) [-]
-    Outputs:
-        - T: Temperature vector (nt x 1)
-    Reference:
-        Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental
-        validation of non-stationary convolutions for the fast simulation of time-variant flowrates
-        in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219.
-        https://doi.org/10.1080/23744731.2023.2279468
-    """
+Function that performs a non-stationary convolution based on varying operating conditions in the
+simulation of GHE. This script follows the implementation of Beaudry et al (2024).
+# Arguments
+    - Q: Thermal load vector (nt x 1) [W, W/m, °C]
+    - g: Set of transfer functions (nt x ns) [°C/W, °Cm/W, -]
+    - ind: Time vector of state transition (ns-1 x 1) [-]
+    - s: State index (ns x 1) [-]
+# Output
+    - T: Temperature vector (nt x 1)
+# Reference
+    Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental
+    validation of non-stationary convolutions for the fast simulation of time-variant flowrates
+    in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219.
+    https://doi.org/10.1080/23744731.2023.2279468
+"""
+function convolution_ns(Q::AbstractVector{<:Real}, g::AbstractArray{<:Real},
+    ind::AbstractVector{<:Integer}, s::AbstractVector{<:Integer})
     # Basic inputs
     n = length(Q)
     index_count = diff([ind; n + 1])

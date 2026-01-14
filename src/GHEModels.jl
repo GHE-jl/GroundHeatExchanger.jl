@@ -8,58 +8,69 @@ Features that are used include spatial superposition, computing the borehole the
 resistance Rb through the first-order multipole method, ...
 
 Author: Gabriel Dion (dion.gabriel100@gmail.com)
-Date: 2025-03
+Date: 2026-01
 Julia version: 1.11.3
 """
 
 module GHEModels
 
-# Include files to make the package
-include("GroundModels.jl")
-include("MFLS.jl")
-include("SpatialSuperposition.jl")
-include("Convolutions.jl")
-include("ThermalResistances.jl")
-include("Utilities.jl")
+using Revise
 
-# Ground model export
-export ils, ics, fls, ilsβ
-export mfls_single_borehole, mfls_borefield_I
+# Include files to make the package
+includet("GroundModels.jl")
+includet("SpatialSuperpositions.jl")
+includet("ThermalResistances.jl")
+includet("Convolutions.jl")
+includet("Utilities.jl")
+
+# Ground model export for closed-loop GHEs
+export ils, ics, fls, mfls
+
+# Ground model export for standing column wells
+export βils
 
 # Spatial superposition export
 export borefield_radius, g_matrix, bloc_matrix, successive_flux
 
 # Thermal resistance export
-export R_f,
-    R_p,
-    R_b_zeroth_order_multipole,
-    R_b_first_order_multipole,
-    R_b,
-    R_a_first_order_multipole,
-    R_bₑ
+export R_f, R_p, R_b_zeroth_order_multipole, R_b_first_order_multipole, R_b,
+    R_a_first_order_multipole, R_bₑ
 
-# Other export from included files
-export convolution,
-    set_nodes,
-    pchip_interpolation
+# Convolution export
+export convolution, step_signal, state_transitions, convolution_ns
+
+# Other export
+export set_nodes, pchip_interpolation
 
 # Temperature simulations
-export ghe_model,
-    building_to_ground_loads,
-    outlet_temperature
+export g_model,
+    T_f
 
-function ghe_model(t::AbstractVector{T}, ks::T, Cs::T, rb::T, H::T, D::T, xy::Array{T}; 
-    model::String="fls") where T<:Real
-    """
-    Allow to run different model with various inputs. (Very poor definition right here)
-    """
+"""
+    g_model(t, ks, Cs, rb, H, D, xy)
 
+Function that allows to generate a transfer function efficiently depending on the model required,
+the number of time steps and arrangement of the borefield. Interpolations are performed if there are
+more than 150 time steps, and more than 50 radius.
+# Arguments
+    - t: Time vector (nt x 1) [s]
+    - ks: Soil thermal conductivity (1x1) [W/mK]
+    - Cs: Soil volumetric specific heat (1x1) [J/m³K]
+    - rb: Borehole radius (1x1) [m]
+    - H: Borehole depth (1x1) [m]
+    - D: Borehole burried depth (1x1) [m]
+    - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
+# Output
+    - g: The transfer function of the GHE (nt x 1) [°Cm/W]
+"""
+function g_model(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb::Real, H::Real,
+    D::Real, xy::AbstractArray{<:Real}; model::String="fls")
     # Set nodes if time vector is too long
     nt = length(t)
     if nt >= 150
         s = set_nodes(nt, 150)
     else
-        s = range(1,nt)
+        s = range(1, nt)
     end
 
     # Select if spatial superposition is required or not
@@ -79,29 +90,23 @@ function ghe_model(t::AbstractVector{T}, ks::T, Cs::T, rb::T, H::T, D::T, xy::Ar
     end
 end
 
-function outlet_temperature(g::Vector{T}, Q::Vector{T}, V::Vector{T}, H::T, Rb::T, T₀::T
-    ) where T<:Real
-    """
-    Function that computes the borehole inlet and outlet temperature using g-functions.
-    Inputs:
-        - g: g-function for the borefield [-]
-        - Q: Ground loads [W]
-        - V: Circulating flow rate [m^3/s]
-        - H: Borehole depth [m]
-        - Rb: Borehole thermal resistance (first-order multipole) [mK/W]
-        - T₀: Undisturbed ground temperature [degC]
-    """
+"""
+    T_f(g, Q, Rbₑ, T₀)
 
+Function that computes the average temperature between the inlet and outlet pipes using a borehole 
+wall g-functions.
+# Arguments
+    - g: g-function for the borefield (nt x 1) [°Cm/W]
+    - q: Ground loads (nt x 1) [W/m]
+    - Rbₑ: Effective borehole thermal resistance (1 x 1) [mK/W]
+    - T₀: Undisturbed ground temperature (1 x 1) [°C]
+# Output
+    - Tf: Average temperatut between the inlet and outlet pipes (nt x 1) [°C]
+"""
+function T_f(g::Union{Real, AbstractVector{<:Real}}, q::Union{Real, AbstractVector{<:Real}},
+    Rbₑ::Real, T₀::Real)
     # Mean fluid temperature
-    Tf = T₀ .+ Q*Rb/H .+ convolution(diff([0;Q/H]), g)
-
-    # Temperature variation between inlet and outlet
-    dT = Q/(V*999.7*4190)
-
-    # Outlet and inlet temperature
-    Tout = Tf .- dT_2
-    Tin = Tf .+ dT/2
-    
-    return Tin, Tout
+    @. Tf = T₀ + (q * Rbₑ) + convolution(diff([0; q]), g)    
+    return Tf
 end
 end

@@ -37,7 +37,7 @@ lines!(ax, 1:length(Q), Q; color = :blue, label = "Original signal")
 lines!(ax, 1:length(x), x; color = :red, label = "Step signal (100 steps)")
 axislegend(ax; position = :rt)
 display(f)
-save("tests/step_signal.pdf", f)
+# save("tests/step_signal.pdf", f)
 
 # Test the clustering function
 n_clusters = 100

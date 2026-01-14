@@ -15,25 +15,25 @@ Author: Gabriel Dion
 Date: 2025-08
 """
 
-function R_f(V̇::T, kf::T, ri::T, cf::T = 4200.0, ρf::T = 1000.0, μf::T = 1.3e-3) where {T <: Real}
-    """
-        R_f(V̇, kf, ri, cf, ρf, μf)
+"""
+    R_f(V̇, kf, ri, cf, ρf, μf)
 
-    Function that computes the convective thermal resistance of a fluid in contact with a surface.
-    The fluid is assumed to be flowing in a cylinder pipe.
-    Inputs:
-        - V̇: Fluid *speed* in pipe [m/s]
-        - kf: Fluid thermal conductivity [W/mK]
-        - ri: Pipe inside radius [m]
-        - cf (default 4200.0): Fluid specific heat [J/kgK]. Default for water at 10 °C.
-        - ρf (default 1000.0): Fluid density [kg/m³]. Default for water at 10 °C.
-        - μf (default 1.3e-3): Fluid viscosity [kg/m⋅s]. Default for water at 10 °C.
-    Output:
-        - Rf: Fluid convective thermal resistance [mK/W]
-    Reference:
-        Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
-        Springer Nature Switzerland.
-    """
+Function that computes the convective thermal resistance of a fluid in contact with a surface.
+The fluid is assumed to be flowing in a cylinder pipe.
+# Arguments
+    - V̇: Fluid *speed* in pipe [m/s]
+    - kf: Fluid thermal conductivity [W/mK]
+    - ri: Pipe inside radius [m]
+    - cf (default 4200.0): Fluid specific heat [J/kgK]. Default for water at 10 °C.
+    - ρf (default 1000.0): Fluid density [kg/m³]. Default for water at 10 °C.
+    - μf (default 1.3e-3): Fluid viscosity [kg/m⋅s]. Default for water at 10 °C.
+# Output
+    - Rf: Fluid convective thermal resistance [mK/W]
+# Reference
+    Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
+    Springer Nature Switzerland.
+"""
+function R_f(V̇::Real, kf::Real, ri::Real, cf::Real = 4200.0, ρf::Real = 1000.0, μf::Real = 1.3e-3)
     # Reynold number
     Re = 2 * ri * ρf * V̇ / μf                   # Eq. 2.33 of Lamarche 2023
 
@@ -77,52 +77,52 @@ function R_f(V̇::T, kf::T, ri::T, cf::T = 4200.0, ρf::T = 1000.0, μf::T = 1.3
     return 1 / (2 * pi * ri * h)            # Eq. 5.6 of Lamarche 2023
 end
 
-function R_p(kp::T, ro::T, ri::T) where {T <: Real}
-    """
-        R_p(kp, ro, ri)
+"""
+    R_p(kp, ro, ri)
 
-    Function that computes the pipe thermal resistance (radial conduction resistance around a
-    cylinder pipe).
-    Inputs:
-        - kp: Pipe thermal conductivity [W/mK]
-        - ri, ro: Pipe inlet and pipe outlet radius [m]
-        - np: Number of pipe in a U-loop configuration (2, 4, 6) (-)
-    Output:
-        - Rp: Pipe conductive thermal resistance [mK/W]
-    Reference:
-        Bergman, T.L., Incropera, F.P.: Fundamentals of Heat and Mass Transfer, 7th edn. Wiley, New 
-        York (2011)
-        Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
-        Springer Nature Switzerland.
-    """
+Function that computes the pipe thermal resistance (radial conduction resistance around a
+cylinder pipe).
+# Inputs
+    - kp: Pipe thermal conductivity [W/mK]
+    - ri, ro: Pipe inlet and pipe outlet radius [m]
+    - np: Number of pipe in a U-loop configuration (2, 4, 6) (-)
+# Output
+    - Rp: Pipe conductive thermal resistance [mK/W]
+# Reference
+    Bergman, T.L., Incropera, F.P.: Fundamentals of Heat and Mass Transfer, 7th edn. Wiley, New 
+    York (2011)
+    Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
+    Springer Nature Switzerland.
+"""
+function R_p(kp::Real, ro::Real, ri::Real)
     return log(ro / ri) / (2 * π * kp)
 end
 
-function R_b_zeroth_order_multipole(ks::T, kg::T, rb::T, ro::T, s::T, Rp::T, Rf::T
-    ) where {T <: Real}
-    """
-        R_b_zeroth_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
+"""
+    R_b_zeroth_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
 
-    Function that computes the thermal borehole resistance of a ground heat exchanger based on the
-    zeroth-order multipole formula for a single U-loop of Hellström (1991) for grout thermal 
-    resistance. It is the equivalent of the line source theory.
-    See Eq. 8.36 of the reference.
-    Note: To obtain only the grout thermal resistance, write Rp and Rf as 0.0.
-    Inputs:
-        - ks, kg: Ground and grout thermal conductivity [W/mK]
-        - rb, ro: Borehole and pipe outlet radius [m]
-        - s: Shank spacing (distance between 2 legs of a U-tubes) [m]
-        - Rp: Pipe thermal resistance [mK/W]
-        - Rf: Fluid thermal resistance [mK/W]
-    Output:
-        - Rb: Borehole thermal resistance [mK/W]
-    Reference:
-        Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
-        for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
-        https://doi.org/10.1016/j.apenergy.2016.11.079
-        Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
-        http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
-    """
+Function that computes the thermal borehole resistance of a ground heat exchanger based on the
+zeroth-order multipole formula for a single U-loop of Hellström (1991) for grout thermal 
+resistance. It is the equivalent of the line source theory.
+See Eq. 8.36 of the reference.
+Note: To obtain only the grout thermal resistance, write Rp and Rf as 0.0.
+# Arguments
+    - ks, kg: Ground and grout thermal conductivity [W/mK]
+    - rb, ro: Borehole and pipe outlet radius [m]
+    - s: Shank spacing (distance between 2 legs of a U-tubes) [m]
+    - Rp: Pipe thermal resistance [mK/W]
+    - Rf: Fluid thermal resistance [mK/W]
+# Output
+    - Rb: Borehole thermal resistance [mK/W]
+# Reference
+    Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
+    for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
+    https://doi.org/10.1016/j.apenergy.2016.11.079
+    Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
+    http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
+"""
+function R_b_zeroth_order_multipole(ks::Real, kg::Real, rb::Real, ro::Real, s::Real, Rp::Real,
+    Rf::Real)
     # Compute β
     Rₚ = Rp + Rf            # Pipe and fluid resistance
     β = 2 * π * kg * Rₚ
@@ -143,29 +143,30 @@ function R_b_zeroth_order_multipole(ks::T, kg::T, rb::T, ro::T, s::T, Rp::T, Rf:
     return Rb
 end
 
-function R_b_first_order_multipole(ks::T, kg::T, rb::T, ro::T, s::T, Rp::T, Rf::T) where {T <: Real}
-    """
-        R_b_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
+"""
+    R_b_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
 
-    Computes the first-order multipole method for the borehole thermal resistance (Eq. 13 of Javed
-    and Spitler 2017) by Hellström 1991 and valid for a single U-tube ground heat exchanger.
-    See Eq. 8.69 of the reference.
-    Note: To obtain only the grout thermal resistance, write Rp and Rf as 0.0.
-    Inputs:
-        - ks, kg: Ground and grout thermal condcutvitiy [W/mK]
-        - rb, ro: Borehole and pipe outlet radius [m]
-        - s: Shank spacing (distance between 2 legs of a U-tubes) [m]
-        - Rp: Pipe thermal resistance [mK/W]
-        - Rf: Fluid thermal resistance [mK/W]
-    Output:
-        - Rb: Borehole thermal resistance [mK/W]
-    Reference:
-        Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
-        for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
-        https://doi.org/10.1016/j.apenergy.2016.11.079
-        Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
-        http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
-    """
+Computes the first-order multipole method for the borehole thermal resistance (Eq. 13 of Javed
+and Spitler 2017) by Hellström 1991 and valid for a single U-tube ground heat exchanger.
+See Eq. 8.69 of the reference.
+Note: To obtain only the grout thermal resistance, write Rp and Rf as 0.0.
+# Arguments
+    - ks, kg: Ground and grout thermal condcutvitiy [W/mK]
+    - rb, ro: Borehole and pipe outlet radius [m]
+    - s: Shank spacing (distance between 2 legs of a U-tubes) [m]
+    - Rp: Pipe thermal resistance [mK/W]
+    - Rf: Fluid thermal resistance [mK/W]
+# Output
+    - Rb: Borehole thermal resistance [mK/W]
+# Reference
+    Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
+    for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
+    https://doi.org/10.1016/j.apenergy.2016.11.079
+    Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
+    http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
+"""
+function R_b_first_order_multipole(ks::Real, kg::Real, rb::Real, ro::Real, s::Real, Rp::Real,
+    Rf::Real)
     # Compute β
     Rₚ = Rp + Rf            # Pipe and fluid resistance
     β = 2 * π * kg * Rₚ
@@ -196,25 +197,25 @@ function R_b_first_order_multipole(ks::T, kg::T, rb::T, ro::T, s::T, Rp::T, Rf::
     return Rb
 end
 
-function R_b(V̇::T, ks::T, kg::T, kp::T, kf::T, rb::T, ro::T, ri::T, s::T, n::Integer = 2,
-    cf::T = 4200.0, ρf::T = 1000.0, μf::T = 1.3e-3) where {T <:Real}
-    """
-        R_b(V̇, ks, kg, kp, kf, rb, ro, ri, s, n, cf, ρf, μf)
-    
-    Function that sums the thermal resistance components of a borehole as a function of its
-    construction parameter and operating conditions.
-    Inputs:
-        - V̇: Fluid *speed* in pipe [m/s]
-        - ks, kg, kp, kf: Ground, grout, pipe and fluid thermal conductivity [W/mK]
-        - rb, ro, ri: Borehole, pipe outside and pipe inside radius [m]
-        - s: Shank spacing (distance between 2 legs of a U-loop) [m]
-        - n (default 2): Number of pipes: Pairs (2, 4 or 6) for U-loops, and 1 for coaxial [-]
-        - cf (default 4200.0): Fluid specific heat [J/kgK]. Default for water at 10 °C.
-        - ρf (default 1000.0): Fluid density [kg/m³]. Default for water at 10 °C.
-        - μf (default 1.3e-3): Fluid viscosity [kg/m⋅s]. Default for water at 10 °C.
-    Output:
-        - Rb: Borehole thermal resistance [mK/W]
-    """
+"""
+    R_b(V̇, ks, kg, kp, kf, rb, ro, ri, s, n, cf, ρf, μf)
+
+Function that sums the thermal resistance components of a borehole as a function of its
+construction parameter and operating conditions.
+# Arguments
+    - V̇: Fluid *speed* in pipe [m/s]
+    - ks, kg, kp, kf: Ground, grout, pipe and fluid thermal conductivity [W/mK]
+    - rb, ro, ri: Borehole, pipe outside and pipe inside radius [m]
+    - s: Shank spacing (distance between 2 legs of a U-loop) [m]
+    - n (default 2): Number of pipes: Pairs (2, 4 or 6) for U-loops, and 1 for coaxial [-]
+    - cf (default 4200.0): Fluid specific heat [J/kgK]. Default for water at 10 °C.
+    - ρf (default 1000.0): Fluid density [kg/m³]. Default for water at 10 °C.
+    - μf (default 1.3e-3): Fluid viscosity [kg/m⋅s]. Default for water at 10 °C.
+# Output
+    - Rb: Borehole thermal resistance [mK/W]
+"""
+function R_b(V̇::Real, ks::Real, kg::Real, kp::Real, kf::Real, rb::Real, ro::Real, ri::Real, s::Real,
+    n::Integer = 2, cf::Real = 4200.0, ρf::Real = 1000.0, μf::Real = 1.3e-3)
     # Fluid thermal resistance
     Rf = R_f(V̇, kf, ri, cf, ρf, μf)
 
@@ -237,29 +238,30 @@ function R_b(V̇::T, ks::T, kg::T, kp::T, kf::T, rb::T, ro::T, ri::T, s::T, n::I
     return Rb
 end
 
-function R_a_first_order_multipole(ks::T, kg::T, rb::T, ro::T, s::T, Rp::T, Rf::T) where {T <: Real}
-    """
-        R_a_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
+"""
+    R_a_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
 
-    Computes the first-order multipole method for the total internal resistance (Eq. 26 of Javed 
-    and Spitler 2017) by Hellström 1991 for a single U-tube ground heat exchanger. This is used to 
-    convert the borehole thermal resistance (Rb) in effective borehole thermal resistance 
-    (Rb*, or Rbₑ).
-    Inputs:
-        - ks, kg: Ground and grout thermal condcutvitiy [W/mK]
-        - rb, ro: Borehole and pipe outlet radius [m]
-        - s: Shank spacing (distance between 2 legs of a U-tubes) [m]
-        - Rp: Pipe thermal resistance [mK/W]
-        - Rf: Fluid thermal resistance [mK/W]
-    Output:
-        - Ra: Total internal thermal resistance [mK/W]
-    Reference:
-        Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
-        for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
-        https://doi.org/10.1016/j.apenergy.2016.11.079
-        Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
-        http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
-    """
+Computes the first-order multipole method for the total internal resistance (Eq. 26 of Javed 
+and Spitler 2017) by Hellström 1991 for a single U-tube ground heat exchanger. This is used to 
+convert the borehole thermal resistance (Rb) in effective borehole thermal resistance 
+(Rb*, or Rbₑ).
+# Arguments
+    - ks, kg: Ground and grout thermal condcutvitiy [W/mK]
+    - rb, ro: Borehole and pipe outlet radius [m]
+    - s: Shank spacing (distance between 2 legs of a U-tubes) [m]
+    - Rp: Pipe thermal resistance [mK/W]
+    - Rf: Fluid thermal resistance [mK/W]
+# Output
+    - Ra: Total internal thermal resistance [mK/W]
+# Reference
+    Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods
+    for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. 
+    https://doi.org/10.1016/j.apenergy.2016.11.079
+    Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
+    http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
+"""
+function R_a_first_order_multipole(ks::Real, kg::Real, rb::Real, ro::Real, s::Real, Rp::Real,
+    Rf::Real)
     # Compute β
     Rₚ = Rf + Rp            # Pipe and fluid resistance
     β = 2 * π * kg * Rₚ
@@ -279,47 +281,24 @@ function R_a_first_order_multipole(ks::T, kg::T, rb::T, ro::T, s::T, Rp::T, Rf::
     return Ra
 end
 
-function R_bₑ(V::T, cf::T, ρf::T, H::T, Rb::T, Ra::T) where {T <:Real}
-    """
-        R_bₑ(V, cf, ρf, H, Rb, Ra)
-    
-    Function that computes the effective thermal borehole resistance (also named Rb*). Effective Rb
-    allows considering the thermal short-circuiting along the borehole. Two types of boundary 
-    conditions are commonly used: (1) uniform borehole wall temperature (UBW) or (2) uniform heat 
-    flux (UHF). The most practical approach is to use an average of both approach.
-    Note: This application is valid for single U-loop (n = 2).
-    Inputs:
-        - V: Fluid flow rate [m³/s]
-        - cf: Fluid specific heat [J/kgK]. Default for water at 10 °C.
-        - ρf: Fluid density [kg/m³]. Default for water at 10 °C.
-        - H: Borehole length [m]
-        - Rb: Borehole thermal resistance [mK/W]
-        - Ra: Total internal thermal resistance [mK/W]
-    Outputs:
-        - Rbₑ: Effective borehole thermal resistance [mK/W]
-    Reference:
-        Claesson, J., & Hellström, G. (2011). Multipole method to calculate borehole thermal 
-        resistances in a borehole heat exchanger. Hvac&R Research, 17(6), 895–911.
-        Javed, S., & Spitler, J. D. (2016). 3—Calculation of borehole thermal resistance. In S. J. 
-        Rees (Ed.), Advances in Ground-Source Heat Pump Systems (pp. 63–95). Woodhead Publishing. 
-        https://doi.org/10.1016/B978-0-08-100311-4.00003-0
-    """
-    # Compute Rbₑ
-    return _Rbₑ(V, cf, ρf, H, Rb, Ra)
-end
+"""
+    R_bₑ(V, cf, ρf, H, Rb, Ra)
+    ...
+    R_bₑ(V, ks, kg, kp, kf, rb, ro, ri, s, cf, ρf, μf, H)
 
-function R_bₑ(V::T, ks::T, kg::T, rb::T, ro::T, s::T, cf::T, ρf::T, H::T, Rp::T, Rf::T
-    ) where {T <:Real}
-    """
-        R_bₑ(V, ks, kg, rb, ro, s, cf, ρf, H, Rp, Rf)
-    
-    Function that computes the effective thermal borehole resistance (also named Rb*). Effective Rb
-    allows considering the thermal short-circuiting along the borehole. Two types of boundary 
-    conditions are commonly used: (1) uniform borehole wall temperature (UBW) or (2) uniform heat 
-    flux (UHF). The most practical approach is to use an average of both approach.
-    Note: This application is valid for single U-loop (n = 2).
-    Inputs:
-        - V: Fluid flow rate [m³/s]
+Function that computes the effective thermal borehole resistance (also named Rb*). Effective Rb
+allows considering the thermal short-circuiting along the borehole. Two types of boundary 
+conditions are commonly used: (1) uniform borehole wall temperature (UBW) or (2) uniform heat 
+flux (UHF). The most practical approach is to use an average of both approach.
+Note: This application is valid for single U-loop (n = 2).
+# Arguments
+    - V: Fluid flow rate [m³/s]
+    - cf: Fluid specific heat [J/kgK]. Default for water at 10 °C.
+    - ρf: Fluid density [kg/m³]. Default for water at 10 °C.
+    - H: Borehole length [m]
+    - Rb: Borehole thermal resistance [mK/W]
+    - Ra: Total internal thermal resistance [mK/W]
+            - V: Fluid flow rate [m³/s]
         - ks, kg: Ground and grout thermal conductivity [W/mK]
         - rb, ro: Borehole and pipe ouside radius [m]
         - s: Shank spacing (distance between 2 legs of a U-loop) [m]
@@ -328,37 +307,7 @@ function R_bₑ(V::T, ks::T, kg::T, rb::T, ro::T, s::T, cf::T, ρf::T, H::T, Rp:
         - H: Borehole length [m]
         - Rp: Pipe thermal resistance [mK/W]
         - Rf: Fluid thermal resistance [mK/W]
-    Outputs:
-        - Rbₑ: Effective borehole thermal resistance [mK/W]
-    Reference:
-        Claesson, J., & Hellström, G. (2011). Multipole method to calculate borehole thermal 
-        resistances in a borehole heat exchanger. Hvac&R Research, 17(6), 895–911.
-        Javed, S., & Spitler, J. D. (2016). 3—Calculation of borehole thermal resistance. In S. J. 
-        Rees (Ed.), Advances in Ground-Source Heat Pump Systems (pp. 63–95). Woodhead Publishing. 
-        https://doi.org/10.1016/B978-0-08-100311-4.00003-0
-    """
-
-    # Compute Rb and Ra with the first-order multipole method
-    Rb = R_b_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
-
-    Ra = R_a_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
-
-    # Compute Rbₑ
-    return _Rbₑ(V, cf, ρf, H, Rb, Ra)
-end
-
-function R_bₑ(V::T, ks::T, kg::T, kp::T, kf::T, rb::T, ro::T, ri::T, s::T, cf::T, ρf::T, μf::T, 
-    H::T) where {T <:Real}
-    """
-        R_bₑ(V, ks, kg, kp, kf, rb, ro, ri, s, cf, ρf, μf, H)
-    
-    Function that computes the effective thermal borehole resistance (also named Rb*). Effective Rb
-    allows considering the thermal short-circuiting along the borehole. Two types of boundary 
-    conditions are commonly used: (1) uniform borehole wall temperature (UBW) or (2) uniform heat 
-    flux (UHF). The most practical approach is to use an average of both approach.
-    Note: This application is valid for single U-loop (n = 2).
-    Inputs:
-        - V: Fluid flow rate [m³/s]
+            - V: Fluid flow rate [m³/s]
         - ks, kg, kp, kf: Ground, grout, pipe and fluid thermal conductivity [W/mK]
         - rb, ro, ri: Borehole, pipe outside and pipe inside radius [m]
         - s: Shank spacing (distance between 2 legs of a U-loop) [m]
@@ -366,15 +315,33 @@ function R_bₑ(V::T, ks::T, kg::T, kp::T, kf::T, rb::T, ro::T, ri::T, s::T, cf:
         - ρf (default 1000.0, opt.): Fluid density [kg/m³]. Default for water at 10 °C.
         - μf (default 1.3e-3, opt.): Fluid viscosity [kg/m⋅s]. Default for water at 10 °C.
         - H: Borehole length [m]
-    Outputs:
-        - Rbₑ: Effective borehole thermal resistance [mK/W]
-    Reference:
-        Claesson, J., & Hellström, G. (2011). Multipole method to calculate borehole thermal 
-        resistances in a borehole heat exchanger. Hvac&R Research, 17(6), 895–911.
-        Javed, S., & Spitler, J. D. (2016). 3—Calculation of borehole thermal resistance. In S. J. 
-        Rees (Ed.), Advances in Ground-Source Heat Pump Systems (pp. 63–95). Woodhead Publishing. 
-        https://doi.org/10.1016/B978-0-08-100311-4.00003-0
-    """
+# Outputs
+    - Rbₑ: Effective borehole thermal resistance [mK/W]
+# Reference
+    Claesson, J., & Hellström, G. (2011). Multipole method to calculate borehole thermal 
+    resistances in a borehole heat exchanger. Hvac&R Research, 17(6), 895–911.
+    Javed, S., & Spitler, J. D. (2016). 3—Calculation of borehole thermal resistance. In S. J. 
+    Rees (Ed.), Advances in Ground-Source Heat Pump Systems (pp. 63–95). Woodhead Publishing. 
+    https://doi.org/10.1016/B978-0-08-100311-4.00003-0
+"""
+function R_bₑ(V::Real, cf::Real, ρf::Real, H::Real, Rb::Real, Ra::Real)
+    # Compute Rbₑ
+    return _Rbₑ(V, cf, ρf, H, Rb, Ra)
+end
+
+function R_bₑ(V::Real, ks::Real, kg::Real, rb::Real, ro::Real, s::Real, cf::Real, ρf::Real, H::Real,
+    Rp::Real, Rf::Real)
+    # Compute Rb and Ra with the first-order multipole method
+    Rb = R_b_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
+    Ra = R_a_first_order_multipole(ks, kg, rb, ro, s, Rp, Rf)
+
+    # Compute Rbₑ
+    return _Rbₑ(V, cf, ρf, H, Rb, Ra)
+end
+
+function R_bₑ(V::Real, ks::Real, kg::Real, kp::Real, kf::Real, rb::Real, ro::Real, ri::Real,
+    s::Real, cf::Real, ρf::Real, μf::Real, H::Real)
+    # Speed flow rate in the pipe
     V̇ = V / (π * ri^2)
     
     # Compute Rf
@@ -393,10 +360,12 @@ function R_bₑ(V::T, ks::T, kg::T, kp::T, kf::T, rb::T, ro::T, ri::T, s::T, cf:
 
 end
 
-function _Rbₑ(V::T, cf::T, ρf::T, H::T, Rb::T, Ra::T) where {T <: Real}
-    """
-        _Rbₑ(V, cf, ρf, H, Rb, Ra)
-    """
+"""
+    _Rbₑ(V, cf, ρf, H, Rb, Ra)
+
+Function that computes the vertical thermal borehole resistance.
+"""
+function _Rbₑ(V::Real, cf::Real, ρf::Real, H::Real, Rb::Real, Ra::Real)
     # UBW - See Eq. 3.68-3.70 of Javec et Spitler (2016)
     R1b = 2 * Rb                                    # Eq. 3.12
     R12 = (2 * Ra * R1b) / (2 * R1b - Ra)           # Eq. 3.14
@@ -411,6 +380,6 @@ function _Rbₑ(V::T, cf::T, ρf::T, H::T, Rb::T, Ra::T) where {T <: Real}
     # UHF - See Eq. 3.67 of Javec et Spitler (2016)
     Rbₑ2 = Rb + (1 / (3 * Ra)) * tmp^2
 
-    # Final calculation of the  effective borehole thermal resistance
+    # Final calculation of the effective borehole thermal resistance
     return (Rbₑ1 + Rbₑ2) / 2
 end

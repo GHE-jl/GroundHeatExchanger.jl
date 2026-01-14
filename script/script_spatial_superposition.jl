@@ -7,9 +7,6 @@ using CairoMakie
 
 includet("../src/GHEModels.jl")
 using .GHEModels
-includet("../src/FigOptions.jl")
-update_fig_theme()
-col = fig_color()
 
 # Define paremeters
 #t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
@@ -38,24 +35,31 @@ vD = 1e-7                       # Groundwater flow
 #Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
 
 # Spatial superposition with bloc matrix
-#=nx, ny, B = 1, 1, 5.
+nx, ny, B = 1, 1, 5.
 xy1 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
 @time g_fls_1_direct = fls(t, k.s, C.s, r.b, H, D)
-@time g_fls_1_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy1)=#
+@time g_fls_1_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy1)
+@time g_fls_1_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy1)
 
-#=nx, ny, B = 2, 2, 5.
-xy2 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_2_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy2)=#
+# nx, ny, B = 2, 2, 5.
+# xy2 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
+# @time g_fls_2_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy2)
+# @time g_fls_2_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy2)
 
-nx, ny, B = 5, 5, 5.
-xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_3_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
-@time g_fls_3_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy3)
+# nx, ny, B = 5, 5, 5.
+# xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
+# @time g_fls_3_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
+# @time g_fls_3_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy3)
 
 # Figure
 f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
 ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = L"$g$ (°Cm/W)", xscale = log10)
-lines!(ax, t, g_fls_3_bm, color = col[1], linestyle = :solid, label = "Bloc matrix")
-lines!(ax, t, g_fls_3_sf, color = col[2], linestyle = :dash, label = "Successive flux")
+lines!(ax, t, g_fls_1_direct, color = "black", linestyle = :solid, linewidth = 2, label = "FLS")
+lines!(ax, t, g_fls_1_bm, color = "cyan", linestyle = :solid, label = "Bloc matrix 1x1")
+lines!(ax, t, g_fls_1_sf, color = "black", linestyle = :dash, label = "Successive flux 1x1")
+# lines!(ax, t, g_fls_2_bm, color = "green", linestyle = :solid, label = "Bloc matrix 2x2")
+# lines!(ax, t, g_fls_2_sf, color = "black", linestyle = :dash, label = "Successive flux 2x2")
+# lines!(ax, t, g_fls_3_bm, color = "red", linestyle = :solid, label = "Bloc matrix 5x5")
+# lines!(ax, t, g_fls_3_sf, color = "black", linestyle = :dash, label = "Successive flux 5x5")
 axislegend(ax, position = :lt)
 display(f)
