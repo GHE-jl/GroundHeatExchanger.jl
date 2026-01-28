@@ -27,7 +27,7 @@ includet("Utilities.jl")
 export ils, ics, fls, mfls
 
 # Ground model export for standing column wells
-export βils
+export βils, βils_outlet, Rb_SCW, effective_K
 
 # Spatial superposition export
 export borefield_radius, g_matrix, bloc_matrix, successive_flux

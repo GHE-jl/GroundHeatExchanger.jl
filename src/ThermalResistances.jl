@@ -49,9 +49,9 @@ function R_f(V̇::Real, kf::Real, ri::Real, cf::Real = 4200.0, ρf::Real = 1000.
         # Dittus-Boelter (Eq. 2.43a of Lamarche 2023)
         #=mode = "Heating"
         if mode == "Heating" || "heating"
-            Nu_4k = 0.023 * 4000^0.8 * Pr^0.4
-        elseif mode == "Cooling" || "cooling"
             Nu_4k = 0.023 * 4000^0.8 * Pr^0.3
+        elseif mode == "Cooling" || "cooling"
+            Nu_4k = 0.023 * 4000^0.8 * Pr^0.4
         end=#
         # Gnielinski (Eq. 2.43b of Lamarche 2023)
         f = (0.79 * log(4000) - 1.64)^(-2)
@@ -61,9 +61,9 @@ function R_f(V̇::Real, kf::Real, ri::Real, cf::Real = 4200.0, ρf::Real = 1000.
         # Dittus-Boelter (Eq. 2.43a Lamarche 2023)
         #=mode = "Heating"
          if mode == "Heating" || "heating"
-            Nu = 0.023 * Re^0.8 * Pr^0.4        
-         elseif mode == "Cooling" || "cooling"
             Nu = 0.023 * Re^0.8 * Pr^0.3
+         elseif mode == "Cooling" || "cooling"
+            Nu = 0.023 * Re^0.8 * Pr^0.4
          end=#
          # Gnielinski (Eq. 2.43b of Lamarche 2023)
         f = (0.79 * log(Re) - 1.64)^(-2)
@@ -133,7 +133,6 @@ function R_b_zeroth_order_multipole(ks::Real, kg::Real, rb::Real, ro::Real, s::R
     # Compute θ₁ to θ₃
     θ₁ = s / (2 * rb)   # equal to D/rb
     θ₂ = rb / ro
-    #@show [θ₁, θ₂]
     
     # Compute Rb with Eq. 12 from Javed and Spitler 2017
     Rb = (1 / (4 * π * kg)) * (β + log(θ₂ / (2 * θ₁ * (1 - θ₁^4)^σ)))
@@ -283,7 +282,7 @@ end
 
 """
     R_bₑ(V, cf, ρf, H, Rb, Ra)
-    ...
+    R_bₑ(V, ks, kg, rb, ro, s, cf, ρf, H, Rp, Rf)
     R_bₑ(V, ks, kg, kp, kf, rb, ro, ri, s, cf, ρf, μf, H)
 
 Function that computes the effective thermal borehole resistance (also named Rb*). Effective Rb

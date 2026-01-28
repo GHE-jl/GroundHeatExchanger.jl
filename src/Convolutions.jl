@@ -79,7 +79,8 @@ state changes and state index for a set of operating conditions.
     - vectors: any number of input vector for all parameter affecting the operating conditions
 # Outputs
     - ind: Indices of state change on the vectors
-    - s: State index for each segment delimited by the indices
+    - state: State index for each segment delimited by the indices
+    - ind_unique: Indices of unique state values
 """
 function state_transitions(vectors::AbstractArray...)
     # Check to have at least one vector

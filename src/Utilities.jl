@@ -45,80 +45,81 @@ function set_nodes(nt::Integer, n₀::Integer)
 end
 
 """
-    water_density(T::Real)
+    water_ρ(T::Real)
 
-Water density ρ(T) in kg/m³, 0 ≤ T ≤ 150°C at 1 atm.
-Equation from IAPWS Formulation 1980 Auxiliary Equation (Kell, 1975 revision).
-Ref: Wagner & Pruß (2002), J. Phys. Chem. Ref. Data 31(2), 387-535
+Water density ρ(T), 0 ≤ T ≤ 100°C at 1 atm. The polynomial equation is a fit to the data from the 
+Engineering Toolbox. The values can be validates with a temperature vector `T = 0.1:1:100`.
+# Argument
+    - T: Temperature [°C]
+# Output
+    - ρ: Density [kg/m³]
+# Reference
+    - The Engineering ToolBox (2003). Water Density, Specific Weight and Thermal Expansion 
+        Coefficients - Temperature and Pressure Dependence. [online] Available at: 
+        https://www.engineeringtoolbox.com/water-density-specific-weight-d_595.html 
+        [Accessed 2026-01-14].
 """
-function water_density(T::Real)::Float64
-    Tc = 228.725  # K
-    t = T + 273.15  # convert to K
-    θ = 1 - t / Tc
-    ρ = 999.83952 + 16.952577*t + (-0.010415494*t^2) + 
-        (-0.000063888*t^3) + (0.000000434*t^4) +
-        θ*(47.427794 + (-3.896200*t) + (0.018195*θ)) +
-        (θ^2 * (-113.40 + 0.786*t)) +
-        (θ^5 * -3.67e5) +
-        (θ^18 * 1.93e5)
-    return ρ * (1 - 1.63e-8 * t^2)  # small pressure correction term
+function water_ρ(T::Real)::Float64
+    return 999.8475436930158 + 0.06180756931966996*T - 0.008309049138917115*T^2 + 
+        6.35713412865478e-5*T^3 - 3.8404497053894326e-7*T^4 + 1.0249871031879443e-9*T^5
 end
 
 """
     water_cp(T::Real)
 
-Specific heat capacity Cp(T) in J/(kg·K), 0 ≤ T ≤ 100°C.
-Equation from Young & Jones (1994), 5th ed., p. 165.
-Ref: Engineering Toolbox water Cp correlations
+Water specific heat capacity cp(T), 0 ≤ T ≤ 100°C. The polynomial equation is a fit to the isobaric 
+specific heat capacity data from the Engineering Toolbox. The values can be validates with a 
+temperature vector `T = 0.1:1:100`.
+# Argument
+    - T: Temperature [°C]
+# Output
+    - cp: Specific heat capacity [J/(kg·K)]
+# Reference
+    - The Engineering ToolBox (2004). Specific Heat Capacity of Water: Temperature-Dependent Data 
+        and Calculator. [online] Available at: 
+        https://www.engineeringtoolbox.com/specific-heat-capacity-water-d_660.html 
+        [Accessed 2026-01-14].
 """
-function water_cp(T::Real)::Float64
-    # Polynomial fit: Cp(T) = a + bT + cT² + dT³ + eT⁴
-    a, b, c, d, e = 4217.4, -3.7203, 0.14137, -0.0024808, 1.584e-5
-    return a + b*T + c*T^2 + d*T^3 + e*T^4 + 2 # small correction term to fit Engineering Toolbox
+function water_cp(T::Real)
+    return 4219.849078078278 - 3.266686616602623*T + 0.09969277880041719*T^2 - 
+        0.0014860911377001344*T^3 + 1.161963811563561e-5*T^4 - 3.5034316470844105e-8*T^5
 end
 
 """
-    water_thermal_conductivity(T::Real)
+    water_k(T::Real)
 
-Thermal conductivity k(T) in W/(m·K), 0 ≤ T ≤ 100°C.
-Equation from IAPWS Formulation 1995 for thermal conductivity.
-Simplified form for atmospheric pressure.
-Ref: IAPWS Release on Thermal Conductivity (2018)
+Water thermal conductivity k(T), 0 ≤ T ≤ 99.6°C at 1 bar. The polynomial equation is a fit to the 
+data from the Engineering Toolbox. The values can be validates with a temperature vector 
+`T = 0.1:1:100`.
+# Argument
+    - T: Temperature [°C]
+# Output
+    - k: Thermal conductivity [W/mK]
+# Reference
+    - The Engineering ToolBox (2018). Thermal Conductivity of Water: Temperature and Pressure Data. 
+        [online] Available at: https://www.engineeringtoolbox.com/water-liquid-gas-thermal-
+        conductivity-temperature-pressure-d_2012.html [Accessed 2026-01-14].
 """
-function water_thermal_conductivity(T::Real)::Float64
-    t = T + 273.15  # K
-    # Base value at 0°C: 0.561 W/mK
-    k0 = 0.561
-    # Temperature dependence from IAPWS
-    L = [-1.480663765, 4.122177914e-2, -2.626455426e-1,
-         9.622313981e-2, -2.368174243e-2, 2.642215220e-2]
-    Tr = 647.096  # K
-    τ = 1 - t/Tr
-    k_red = exp(L[1] + L[2]*τ + L[3]*τ^2 + L[4]*τ^3 + L[5]*τ^4 + L[6]*τ^5)
-    return k0 * k_red * (1 + 0.001*t/273.15)  # minor linear correction
+function water_k(T::Real)
+    return 0.5557250521318174 + 0.002490814640452007*T - 2.1170044416971473e-5*T^2 + 
+        1.285515973680875e-7*T^3 - 4.546428806458628e-10*T^4 + 9.750314739837196e-14*T^5
 end
 
 """
-    water_viscosity(T::Real)
+    water_μ(T::Real)
 
-Dynamic viscosity μ(T) in Pa·s, 0 ≤ T ≤ 150°C.
-Equation from IAPWS Formulation 2008 for viscosity.
-Ref: IAPWS Release on Viscosity (2008)
+Dynamic viscosity μ(T), 0 ≤ T ≤ 100°C. The polynomial equation is a fit to the data from the 
+Engineering Toolbox. The values can be validates with a temperature vector `T = 0.1:1:100`.
+# Argument
+    - T: Temperature [°C]
+# Output
+    - μ: Dynamic viscosity [Pa·s or kg/(m·s)]
+# Reference
+    - The Engineering ToolBox (2004). Water - Dynamic and Kinematic Viscosity at Various 
+        Temperatures and Pressures. [online] Available at: https://www.engineeringtoolbox.com/water-
+        dynamic-kinematic-viscosity-d_596.html [Accessed 2026-01-14].
 """
-function water_viscosity(T::Real)::Float64
-    Tc = 647.096  # K
-    t = T + 273.15
-    τ = t/Tc
-    # IAPWS viscosity equation: μ = μ₀ * μ₁ * exp(μ₂ + μ₃/τ)
-    μ₀ = 1e-3 * sqrt(100.0/t)  # reference viscosity [Pa·s]
-    
-    # μ₁ term (zero density limit)
-    H = 1.0 + (1.994n0 * τ) + (1.233n0 * τ^1.5)
-    μ₁ = exp(0.97897 * (1/τ - 1))
-    
-    # μ₂ and μ₃ terms (density correction, atm pressure ≈ low density)
-    μ₂ = 0.0018  # simplified for low density
-    μ₃ = 0.00001
-    
-    return μ₀ * μ₁ * exp(μ₂ + μ₃/t)
+function water_μ(x::Real)
+    return 0.001790966556989398 - 5.965082369793418e-5*x + 1.3185191782991122e-6*x^2 - 
+        1.8236868027209892e-8*x^3 + 1.3644271817518522e-10*x^4 - 4.137645533574321e-13*x^5
 end
