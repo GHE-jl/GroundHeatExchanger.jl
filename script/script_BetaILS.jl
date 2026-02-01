@@ -1,5 +1,6 @@
 """
-Script testing the enhanced \beta-ILS model from GHEModels.jl using a single borehole.
+Script testing the enhanced \beta-ILS model from GHEModels.jl using a single borehole to model a
+standing column well (SCW).
 """
 
 using BenchmarkTools
@@ -16,7 +17,7 @@ rb = 0.083                      # Borehole radius [m]
 rm = 100.0                      # Influence radius of the borehole [m]
 
 # Define ground properties
-T0 = 8.0                        # Initial temperature of the ground [°C]
+T₀ = 8.0                        # Initial temperature of the ground [°C]
 ks = 2.74                       # Thermal conductivity of the ground [W/m·K]
 kp = 0.42                       # Thermal conductivity of the pipe [W/m·K]
 Cs = 2e6                        # Volumetric heat capacity of the ground [J/m³·K]
@@ -53,33 +54,57 @@ V = Vp[ind_unique]              # Unique pumping flow rates [m³/s]
 B = Vb[ind_unique]              # Unique bleed flow rates [m³/s]
 ns = length(ind)                # Number of states
 
-# Evaluate Peclet number for each state
-# At = B / 2 / π ./ H             # Fluid planar rate in the pipe [m^2/s]
-# α = ks ./ (ones(ns) * Cs)       # Diffusivity (m^2/s)
-# Pe = At / α                     # Peclet number (-)
-
-# Evaluate the thermal resistance
+# Verification: Evaluate the thermal resistance
 Rb, Rv, f = zeros(length(ind)), zeros(length(ind)), zeros(length(ind)) # Preallocation
 for i in 1:length(ind)
-    Rb[i], Rv[i], f[i] = Rb_SCW(V[i], kp, rb, ro, ri, H, Hp, 8.0)
+    Rb[i], Rv[i], f[i] = Rb_SCW(V[i], kp, rb, ro, ri, H, Hp, T₀)
 end
 
-KK = effective_K(K, H)
+# Verification: Evaluate properties and lengths for induced convergence flow
+KK = convergence_flow(K, H)
 
-### Testing ###
-g1 = _βils(t, k, rb, H, V[1], B[1] / V[1], f[1], K = K)
+# Verification: Borehole wall g-function for a SCW
+gb = Matrix{Float64}(undef, n, ns)
+for i in 1:length(ind)
+    gb[:, i] = βils(t, k, rb, ro, H, V[i], B[i] / V[i], f[i], K = K)
+end
 
-# Evaluate the transfer functions for each state
+# Evaluate the outlet transfer function for each set of operating conditions
 g = Matrix{Float64}(undef, n, ns)
 for i in 1:length(ind)
-    g[:, i] = βils_outlet(t, k, kp, rb, ro, ri, H, Hp, V[i], B[i] ./ V[i], T0; K = K)
+    g[:, i] = βils_outlet(t, k, kp, rb, ro, ri, H, Hp, V[i], B[i] ./ V[i], T₀; K = K)
 end
 
-# Plot the transfer functions
-f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
-ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = "Transfer function (-)", xscale = log10)
-for i in 1:ns
-lines!(ax, t, g[:, i], color = :blue, linewidth = 1.5,
-    label = "State $i: V=$(round(V[i]*6e4)) L/min, B=$(round(B[i]*6e4)) L/min")
+# @time g_test = βils_outlet(t, k, kp, rb, ro, ri, H, Hp, V[1], B[1] ./ V[1], T₀; K = K)
+
+# Convert the outlet transfer function to an impulse of 1 °C (for comparison)
+gT = Matrix{Float64}(undef, n, ns)
+for i in 1:length(ind)
+    gT[:, i] = g[:, i] .* Cf * V[i] / H
 end
-axislegend(ax; position = :rt)
+
+# Compute the non-stationary temperature evolution
+ΔT = convolution_ns(Qg / H, g, ind, state)
+T = ΔT .+ T₀
+Tverif = T[[1000, 5000, 10000, 25000, 35000, 40000]]
+
+# Plot the transfer functions
+fig = Figure(; size = (17 * 96 / 2.54, 18 * 96 / 2.54))
+ax = Axis(fig[1, 1], xlabel = L"$t$ (d)", ylabel = L"$Q$ (W)")
+lines!(ax, t / (3600 * 24), Qg, color = :red, linewidth = 1.5)
+
+ax =  Axis(fig[1, 2], xlabel = L"$t$ (d)", ylabel = L"$V$ (L/min)")
+lines!(ax, t / (3600 * 24), Vp * 6e4, color = :blue, linewidth = 1.5)
+lines!(ax, t / (3600 * 24), Vb * 6e4, color = :green, linewidth = 1.5)
+
+ax = Axis(fig[2, 1:2], xlabel = L"$t$ (d)", ylabel = "Transfer function (-)", xscale = log10)
+for i in 1:ns
+lines!(ax, t / (3600 * 24), g[:, i], linewidth = 1.5, label = "State $i")
+    # label = "State $i: V=$(round(V[i]*6e4)) L/min, B=$(round(B[i]*6e4)) L/min")
+end
+axislegend(ax; position = :lt)
+
+ax = Axis(fig[3, 1:2], xlabel = L"$t$ (d)", ylabel = L"$T$ (°C)", )
+lines!(ax, t / (3600 * 24), T, color = :black, linewidth = 1.5)
+
+# display(fig);

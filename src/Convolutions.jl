@@ -44,7 +44,8 @@ end
 """
     step_signal(x, steps)
 
-# This function should be in a package for thermal response test or experimental data interpretation
+### This function should be in a package for experimental data interpretation ###
+
 Function that separated a vector signal "x" in n number of constant steps. This applies mainly
 to help interprete noisy signal into constant values based on average abrupt changes.
 Note: The k-means algorithm used to idenfity the changes can be unstable when too few steps are
@@ -77,6 +78,7 @@ values between either one or a serie of input vectors. The function will identif
 state changes and state index for a set of operating conditions.
 # Arguments
     - vectors: any number of input vector for all parameter affecting the operating conditions
+        - E.g., `state_transitions(x, y, z)`, were the vectors `x`, `y`, `z` are the same legnth.
 # Outputs
     - ind: Indices of state change on the vectors
     - state: State index for each segment delimited by the indices
@@ -121,18 +123,18 @@ simulation of GHE. This script follows the implementation of Beaudry et al (2024
 # Arguments
     - Q: Thermal load vector (nt x 1) [W, W/m, °C]
     - g: Set of transfer functions (nt x ns) [°C/W, °Cm/W, -]
-    - ind: Time vector of state transition (ns-1 x 1) [-]
-    - s: State index (ns x 1) [-]
+    - ind: Time vector of state transition (ns-1 x 1) [-] (from state_transitions())
+    - s: State index (ns x 1) [-] (from state_transitions())
 # Output
-    - T: Temperature vector (nt x 1)
+    - T: Temperature vector (nt x 1) [°C]
 # Reference
-    Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental
-    validation of non-stationary convolutions for the fast simulation of time-variant flowrates
-    in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219.
-    https://doi.org/10.1080/23744731.2023.2279468
+    - Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental
+        validation of non-stationary convolutions for the fast simulation of time-variant flowrates
+        in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219.
+        https://doi.org/10.1080/23744731.2023.2279468
 """
-function convolution_ns(Q::AbstractVector{<:Real}, g::AbstractArray{<:Real},
-    ind::AbstractVector{<:Integer}, s::AbstractVector{<:Integer})
+function convolution_ns(Q::AbstractVector{T}, g::AbstractArray{T},
+    ind::AbstractVector{<:Integer}, s::AbstractVector{<:Integer}) where {T<:AbstractFloat}
     # Basic inputs
     n = length(Q)
     index_count = diff([ind; n + 1])
@@ -141,7 +143,7 @@ function convolution_ns(Q::AbstractVector{<:Real}, g::AbstractArray{<:Real},
     state_vec = vcat([fill(s[i], index_count[i]) for i in eachindex(s)]...)
 
     # Initialize Q_mu, size n × size(g,2)
-    Q_s = zeros(T, n, size(g, 2))
+    Q_s = zeros(n, size(g, 2))
     
     # Assign Q elements to Q_s according to state_vec
     for i in 1:size(g, 2)

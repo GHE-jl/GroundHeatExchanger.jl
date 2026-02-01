@@ -17,10 +17,24 @@ module GHEModels
 using Revise
 
 # Include files to make the package
-includet("GroundModels.jl")
+
+# Include models
+includet("GroundModels/ILS.jl")         # ils: Infinite line source of Ingersol (1948)
+includet("GroundModels/ICS.jl")         # ics: Infinite cylindrical source of Ingersol (1959)
+includet("GroundModels/FLS.jl")         # fls: Finite line source of Claesson and Javed (2011)
+includet("GroundModels/MFLS.jl")        # mfls: Moving finite line source of Guo et al. (2021)
+includet("GroundModels/BetaILS.jl")     # βils: Standing column well model of Jacques et al. (2025)
+
+# Include other spatial superpositions techniques
 includet("SpatialSuperpositions.jl")
+
+# Include thermal resistance Evaluation
 includet("ThermalResistances.jl")
+
+# Include convolution used in temporal superposition
 includet("Convolutions.jl")
+
+# Include other varied functions
 includet("Utilities.jl")
 
 # Ground model export for closed-loop GHEs
