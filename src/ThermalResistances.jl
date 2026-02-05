@@ -30,8 +30,8 @@ The fluid is assumed to be flowing in a cylinder pipe.
 # Output
     - Rf: Fluid convective thermal resistance [mK/W]
 # Reference
-    Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
-    Springer Nature Switzerland.
+    - Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
+        Springer Nature Switzerland.
 """
 function R_f(V̇::Real, kf::Real, ri::Real, cf::Real = 4200.0, ρf::Real = 1000.0, μf::Real = 1.3e-3)
     # Reynold number
@@ -56,7 +56,7 @@ function R_f(V̇::Real, kf::Real, ri::Real, cf::Real = 4200.0, ρf::Real = 1000.
         # Gnielinski (Eq. 2.43b of Lamarche 2023)
         f = (0.79 * log(4000) - 1.64)^(-2)
         Nu_4k = (f / 8) * (4000 - 1000) * Pr / (1 + (12.7 * (f / 8)^0.5 * (Pr^(2 / 3) - 1)))
-        Nu = (1 - γ) * 4.0 + γ * Nu_4k        # Eq. 2.48 of Lamarche 2023
+        Nu = (1 - γ) * 4 + γ * Nu_4k            # Eq. 2.48 of Lamarche 2023
     elseif Re >= 4000                           # Turbulent flow in a pipe
         # Dittus-Boelter (Eq. 2.43a Lamarche 2023)
         #=mode = "Heating"
@@ -137,7 +137,7 @@ function R_b_zeroth_order_multipole(ks::Real, kg::Real, rb::Real, ro::Real, s::R
     # Compute Rb with Eq. 12 from Javed and Spitler 2017
     Rb = (1 / (4 * π * kg)) * (β + log(θ₂ / (2 * θ₁ * (1 - θ₁^4)^σ)))
 
-    #Compute Rb with Eq. 8.36 from Hellström (1991) with division by 4, since there is 2 pipe
+    # (Equivalent) Rb with Eq. 8.36 from Hellström (1991) with division by 4, since there is 2 pipe
     #Rb = (1 / (4 * pi * kg)) * (log(rb^2 / (ro * s)) + σ * log(rb^4 / (rb^4  - (s / 2)^4))) + Rp
     return Rb
 end
@@ -365,7 +365,7 @@ end
 Function that computes the vertical thermal borehole resistance.
 """
 function _Rbₑ(V::Real, cf::Real, ρf::Real, H::Real, Rb::Real, Ra::Real)
-    # UBW - See Eq. 3.68-3.70 of Javec et Spitler (2016)
+    # UBW - See Eq. 3.68-3.70 of Javed et Spitler (2016)
     R1b = 2 * Rb                                    # Eq. 3.12
     R12 = (2 * Ra * R1b) / (2 * R1b - Ra)           # Eq. 3.14
     tmp = H / (V * cf * ρf)
@@ -376,9 +376,9 @@ function _Rbₑ(V::Real, cf::Real, ρf::Real, H::Real, Rb::Real, Ra::Real)
         Rbₑ1 = Rb * η * coth(η)
     end
 
-    # UHF - See Eq. 3.67 of Javec et Spitler (2016)
+    # UHF - See Eq. 3.67 of Javed et Spitler (2016)
     Rbₑ2 = Rb + (1 / (3 * Ra)) * tmp^2
 
     # Final calculation of the effective borehole thermal resistance
-    return (Rbₑ1 + Rbₑ2) / 2
+    return 0.5 * (Rbₑ1 + Rbₑ2)
 end

@@ -19,11 +19,12 @@ using Revise
 # Include files to make the package
 
 # Include models
-includet("GroundModels/ILS.jl")         # ils: Infinite line source of Ingersol (1948)
-includet("GroundModels/ICS.jl")         # ics: Infinite cylindrical source of Ingersol (1959)
-includet("GroundModels/FLS.jl")         # fls: Finite line source of Claesson and Javed (2011)
-includet("GroundModels/MFLS.jl")        # mfls: Moving finite line source of Guo et al. (2021)
-includet("GroundModels/BetaILS.jl")     # βils: Standing column well model of Jacques et al. (2025)
+includet("GroundModels/ILS.jl")         # Infinite line source of Ingersol (1948)
+includet("GroundModels/ICS.jl")         # Infinite cylindrical source of Ingersol (1959)
+includet("GroundModels/FLS.jl")         # Finite line source of Claesson and Javed (2011)
+includet("GroundModels/MILS.jl")        # Moving finite line source of Pasquier et Lamarche (2022)
+includet("GroundModels/MFLS.jl")        # Moving finite line source of Guo et al. (2021)
+includet("GroundModels/BetaILS.jl")     # Standing column well model of Jacques et al. (2025)
 
 # Include other spatial superpositions techniques
 includet("SpatialSuperpositions.jl")
@@ -38,10 +39,11 @@ includet("Convolutions.jl")
 includet("Utilities.jl")
 
 # Ground model export for closed-loop GHEs
-export ils, ics, fls, mfls
+export ils, ics, fls, mils, mfls
+export _ils, _ics, _fls, _mils, _mfls       # For testing
 
 # Ground model export for standing column wells
-export βils, βils_outlet, Rb_SCW, effective_K
+export βils, βils_outlet, Rb_SCW, convergence_flow
 
 # Spatial superposition export
 export borefield_radius, g_matrix, bloc_matrix, successive_flux
@@ -57,8 +59,7 @@ export convolution, step_signal, state_transitions, convolution_ns
 export set_nodes, pchip_interpolation
 
 # Temperature simulations
-export g_model,
-    T_f
+export g_model, T_f
 
 """
     g_model(t, ks, Cs, rb, H, D, xy)

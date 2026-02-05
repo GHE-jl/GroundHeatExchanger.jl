@@ -49,10 +49,10 @@ function βils_outlet(t, k::AbstractMatrix{T}, kp::T, rb::T, ro::T, ri::T, H::T,
     Rfb, Rv, f = Rb_SCW(V, kp, rb, ro, ri, H, Hp, T₀)
 
     # 2. Compute the borehole wall g-function using the β-ILS model
-    gb = βils(t, k, rb, ro, H, V, β, f; K = K)
+    gb = βils(t, k, rb, ro, H, V, β, f; K = K) # Jacques et al. Eq. 8
 
     # 3. Adjust the borehole wall g-function to obtain the outlet g-function for 1 W/m (g̃ᵢ ≥ 0)
-    return @. max(gb - (1 - β) * (Rv / (2 - β) - Rfb), 0.0)
+    return @. max(gb - (1 - β) * (Rv / (2 - β) - Rfb), 0.0) # Jacques et al. Eq. 27
 end
 
 """
@@ -86,6 +86,9 @@ length [W/m] to provide the borehole wall temperature.
     - Nguyen, A., Jacques, L., & Pasquier, P. (2025). An easy-to-use analytical model for 
         standing column wells operating with bleed. Applied Thermal Engineering.
         https://doi.org/10.1016/j.applthermaleng.2024.124543
+    - Jacques, L., Pasquier, P., Nguyen, A., & Beaudry, G. (2025). Improvement and experimental 
+        validation of an analytical model for standing column wells operated with bleed. Applied 
+        Thermal Engineering, 279, 127620.
 """
 function βils(t, k::AbstractMatrix{T}, rb::T, ro::T, H::T, V::T, β::T, f::T = T(0.05);
     K::Union{Nothing, AbstractMatrix{T}}=nothing) where {T<:AbstractFloat}
@@ -102,11 +105,13 @@ function βils(t, k::AbstractMatrix{T}, rb::T, ro::T, H::T, V::T, β::T, f::T = 
     Cs = sum(k[:, 3] .* k[:, 1]) / sum(k[:, 1])
 
     # 2. Induced convergent flow consideration
-    H̃₁, _, K̃₁, _ = convergence_flow(K, H)        # Compute the effective hydraulic properties
+    H̃₁, _, K̃₁, _ = convergence_flow(K, H)   # Compute the effective hydraulic properties
     !isnothing(K) ? H̃e = H̃₁ : H̃e = H/2      # If no heretigeneity, middle point is half H.
     ΔHa = 0.22                              # Assumption: Drawdown caused by recirculation
     rₘ = 100                                # Assumption: Drawdown horizontal influence radius
+    # Jacques et al. Eq. 35
     ΔH̃ = ΔHa - (f * H * V^2 / (4 * π^2 * 9.81 * (rb - ro) * (rb^2 - ro^2)^2)) # Succion drawdown
+    # Jacques et al. Eq. 34
     Ṽ = 2 * π * K̃₁* ΔH̃ * H̃e / (log(rₘ / rb)) # Rate of convergence flow caused by depressurization 
 
     # 3. Layered heterogeneity - Effective length (if present)
@@ -114,6 +119,7 @@ function βils(t, k::AbstractMatrix{T}, rb::T, ro::T, H::T, V::T, β::T, f::T = 
     if !isnothing(K)
         Kₕ = sum(K[:, 2] .* K[:, 1]) / H    # Arithmetic weighted average
         Kᵥ = H / sum(K[:, 1] ./ K[:, 2])    # Harmonic weighted average
+        # Jacques et al. Eq. 31
         K̃ = sqrt(Kₕ * Kᵥ)                   # Effective hydraulic conductivity
         He = H * K̃ / Kₕ                     # Effective length only considering heterogeneity
     else                                    # If no layered heterogeneity is present
@@ -121,25 +127,25 @@ function βils(t, k::AbstractMatrix{T}, rb::T, ro::T, H::T, V::T, β::T, f::T = 
     end
 
     # 3. Compute the Peclet number and dimensionless time
-    ta = @. (Ṽ / H̃e + Vb / He) * t / (π * rb^2) # Dimensionless time
-    Pe = (Ṽ / H̃e + Vb / He) / (2 * π * (ks / Cs)) # Effective Peclet number
+    ta = @. (Ṽ / H̃e + Vb / He) * t / (π * rb^2) # Dimensionless time, Jacques et al. Eq. 33
+    Pe = (Ṽ / H̃e + Vb / He) / (2 * π * (ks / Cs)) # Effective Peclet number, Jacques et al. Eq. 32
     
     # 4. Range of validity of the inputs based on scenarios in Nguyen et al. (2025)
     # values_validity(t, ks, Cs, rb, H, V, β, Vb, Pe)
 
-    # 5. Compute the scaling function h
+    # 5. Compute the scaling function h (see Table 1 in Jacques et al.)
     coefs₁ = [-0.4478, 0.1288, 0.6458, 0.1483]
     coefs₂ = [0.7110, -0.7595, 0.7838, 0.5114]
     coefs₃ = [1.0011, 0.7339, 0.2383, -0.0100]
-    ϵ = @. coefs₁ * Pe^coefs₂ + coefs₃
+    ϵ = @. coefs₁ * Pe^coefs₂ + coefs₃      # Jacques et al. Eq. 7
     h = @. ϵ[1] * (1 - ϵ[2] * β) *
-           (1 + erf((sqrt(Pe) / ϵ[3]) * ((1 - ta^ϵ[4]) / (ta^ϵ[4]))))
+           (1 + erf((sqrt(Pe) / ϵ[3]) * ((1 - ta^ϵ[4]) / (ta^ϵ[4])))) # Jacques et al. Eq. 4
     
     # 6. Initial transfer function g_0 based on the SLI
-    g₀ = ils(t, ks, Cs, rb)
+    g₀ = ils(t, ks, Cs, rb)                 # Jacques et al. Eq. 3
 
     # 7. Combine initial and scaling function
-    gb = convolution(diff([0; g₀]), h)
+    gb = convolution(diff([0; g₀]), h)      # Jacques et al. Eq. 8
     return gb
 end
 
@@ -164,15 +170,17 @@ formulation assumes uniform flux along the borehole wall.
     - Rfb: Subsurface effective borehole thermal resistance in a SCW [K·m/W]
     - Rv: Hydraulic resistance due to the fluid flow [K·m/W]
 # Reference
-    - [1] Jacques, L., Pasquier, P., Nguyen, A., & Beaudry, G. (2025). Improvement and experimental 
+    - Jacques, L., Pasquier, P., Nguyen, A., & Beaudry, G. (2025). Improvement and experimental 
         validation of an analytical model for standing column wells operated with bleed. Applied 
         Thermal Engineering, 279, 127620.
-    - [2] Seol, H., Jeong, S., Cho, C., & You, K. (2008). Shear load transfer for rock-
+    - Seol, H., Jeong, S., Cho, C., & You, K. (2008). Shear load transfer for rock-
         socketed drilled shafts based on borehole roughness and geological strength index (GSI). 
         International Journal of Rock Mechanics and Mining Sciences, 45(6), 848–861. 
         https://doi.org/10.1016/j.ijrmms.2007.09.008
-    - [3] Todorov, O., Alanne, K., Virtanen, M., & Kosonen, R. (2021). Different Approaches for 
+    - Todorov, O., Alanne, K., Virtanen, M., & Kosonen, R. (2021). Different Approaches for 
         Evaluation and Modeling of the Effective Thermal Resistance of Groundwater-Filled Boreholes.
+    - Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
+        Springer Nature Switzerland.
 """
 function Rb_SCW(V::T, kp::T, rb::T, ro::T, ri::T, H::T, Hp::T, Tf::T, dT::T = 2.0, 
     ) where {T<:AbstractFloat}
@@ -183,7 +191,7 @@ function Rb_SCW(V::T, kp::T, rb::T, ro::T, ri::T, H::T, Hp::T, Tf::T, dT::T = 2.
     μf = water_μ(Tf)                    # Water viscosity at working fluid temperature
     μf_dT = water_μ(Tf + dT)            # Water viscosity at working fluid temperature + dT
     np = 1                              # number of pipes (1 in a SCW)
-    L = [Hp, H]                         # Lengths for [1] pipe and [2] borehole for [m]
+    L = [Hp, H]                         # Lengths for (1) pipe and (2) borehole for [m]
     ϵb = 5e-4                           # Assumption: Borehole roughness [m]
     ϵp = 0.0                            # Assumption: Pipe roughness [m]
 
@@ -206,7 +214,7 @@ function Rb_SCW(V::T, kp::T, rb::T, ro::T, ri::T, H::T, Hp::T, Tf::T, dT::T = 2.
         if Re[i] < 2300                 # Laminar flow in pipe or borehole
             term1 = (Re[i] * Pr[i] * 2 * rₑ[i] / L[i])^0.333 * (μf / μf_dT)^0.14
             if i == 1 && term1 >= 2
-                Nu[i] = 4.36
+                Nu[i] = 4.36    # Lamarche Eq. 2.42
             elseif i == 1
                 Nu[i] = 1.86 * term1
             elseif i == 2
@@ -215,51 +223,48 @@ function Rb_SCW(V::T, kp::T, rb::T, ro::T, ri::T, H::T, Hp::T, Tf::T, dT::T = 2.
             else
                 error("Unexpected case in Nusselt number calculation. Laminar flow.")
             end
-        elseif Re[i] > 10000 || i == 2  # Turbulent flow (Re>2300 in borehole, Ref[3])
+        elseif Re[i] > 10000 || i == 2  # Turbulent flow (Re>2300 in borehole, Todorov et al. 2021)
             if i == 1                   # Turbulent flow in pipe
                 # Dittus-Boelter equation to solve for Nu
                 dT > 0 ? n = 0.3 : n = 0.4 # Define fluid heating or cooling
-                Nu[i] = 0.023 * Re[i]^0.8 * Pr[i]^n            
+                Nu[i] = 0.023 * Re[i]^0.8 * Pr[i]^n # Jacques et al. Eq. A.44
             elseif i == 2               # Turbulent flow in borehole
                 # Colebrook-White equation to solve for f in borehole
-                ϵ = (ϵb * rb + ϵp * ro) / (rb + ro) # Equivalent roughness [m]
+                ϵ = (ϵb * rb + ϵp * ro) / (rb + ro) # Equivalent roughness [m] Jacques et al. Eq. 47
                 obj_fun(F) = 1 / sqrt(F) + 2 * log10(ϵ / (3.7 * (2 * (rb - ro))) + 2.51 / 
-                    (Re[i] * sqrt(F)))
+                    (Re[i] * sqrt(F)))  # Jacques et al. Eq. A.45
                 f = find_zero(obj_fun, 1e-2)
-                # Nusselt number in borehole (see Ref[3])
-                Nu[i] = ((f / 8) * (Re[i] - 1000) * Pr[i]) / (1 + 12.7 * (f / 8)^0.5 * 
-                    (Pr[i]^(2 / 3) - 1))
+                # Nusselt number in borehole (see Todorov et al. 2021)
+                Nu[i] = ((f / 8) * (Re[i] - 1000.0) * Pr[i]) / (1 + 12.7 * (f / 8)^0.5 * 
+                    (Pr[i]^(2 / 3) - 1)) # Jacques et al. Eq. A.46
             else
                 error("Unexpected case in Nusselt number calculation. Turbulent flow.")
             end
-
         else    # Transitional flow in pipe only (i = 1 and 2300 < Re < 10000)
             f = (1.58 * log(Re[i]) - 3.28)^(-2) # Jacques et al. 2025
-            # f = (1.82 * log(Re[i]) - 3.28)^(-2) # Petukhov 1970
             # f = (0.79 * log(Re[i]) - 1.64)^(-2) # Lamarche 2023
-            Nu[i] = ((f / 2) * (Re[i] - 1000) * Pr[i]) / (1 + 12.7 * (f / 2)^0.5 * 
-                (Pr[i]^(2 / 3) - 1))
+            Nu[i] = ((f / 2) * (Re[i] - 1000.0) * Pr[i]) / (1 + 12.7 * (f / 2)^0.5 * 
+                (Pr[i]^(2 / 3) - 1)) # Jacques et al. Eq. A.46
         end
         # Film coefficient (h) and fluid resistance (Rf)
-        h[i] = Nu[i] * kf / (2 * rₑ[i])
+        h[i] = Nu[i] * kf / (2 * rₑ[i]) # 
         Rf[i] = 1 / (2 * np * π * rₑ[i] * h[i]) # Fluid thermal resistance
     end
 
     # Convective thermal resistances for the fluid in pipe and borehole
-    RCi = 1 / (Nu[1] * kf * π)          # In pipe at ri
-    RCo = 1 / (Nu[2] * kf * π) * rₑ[2] / ro # In borehole at ro
-    RCb = 1 / (Nu[2] * kf * π) * rₑ[2] / rb # In borehole at rb (Nu equivalent in ro and rb)
+    RCi = 1 / (Nu[1] * kf * π)          # In pipe at ri, Jacques et al. Eq. A. 41
+    RCo = 1 / (Nu[2] * kf * π) * rₑ[2] / ro # In borehole at ro, Jacques et al. Eq. 42
+    RCb = 1 / (Nu[2] * kf * π) * rₑ[2] / rb # In borehole at rb, Jacques et al. Eq. 43
 
     # Pipe thermal resistance
-    Rp = log(ro / ri) / (2 * π * np * kp * Hp)
+    Rp = log(ro / ri) / (2 * π * np * kp * Hp) # Jacques et al. Eq. A.40
 
     # Total borehole thermal resistance in SCW
-    Rv = H / (cpf * ρf * V)             # Hydraulic resistance due to the fluid flow
-    R1 = RCb
-    R12 = RCi + RCo + Rp
-    Rsb = R1 * (1 + (Rv^2 / (3 * R1 * R12))) # Subsurface borehole resistance in a SCW
-    # Rfb = Rsb - RCb                     # Fluid thermal resistance of the borehole in a SCW
-    Rfb = R12 - RCb
+    Rv = H / (cpf * ρf * V)             # Fluid flow hydraulic resistance, Jacques et al. Eq. 18
+    R12 = RCi + RCo + Rp                # Internal thermal resistance, Jacques et al. Eq. 17
+    Rsb = R1 * (1 + (Rv^2 / (3 * RCb * R12))) # Subsurface borehole resist., Jacques et al. Eq. 15
+    Rfb = Rsb - RCb                     # Fluid thermal resistance of the borehole in a SCW
+    # Rfb2 = R12 - RCb                   # As implemented in the codes of Jacques et al. (2025)
     return Rfb, Rv, f
 end
 
@@ -340,11 +345,11 @@ function convergence_flow(K::AbstractMatrix{T}, H::T) where {T<:AbstractFloat}
         # Effective conductivities
         Kh1 = ΣKh1 / H_up
         Kv1 = H_up / ΣKv1
-        K̃₁ = sqrt(Kh1 * Kv1)
+        K̃₁ = sqrt(Kh1 * Kv1)            # Jacques et al. Eq. 31
 
         Kh2 = ΣKh2 / H_low
         Kv2 = H_low / ΣKv2
-        K̃₂ = sqrt(Kh2 * Kv2)
+        K̃₂ = sqrt(Kh2 * Kv2)            # Jacques et al. Eq. 31
 
         # Update balance point
         zmp = Kh2 * ΔH / (Kh1 + Kh2)
@@ -358,8 +363,8 @@ function convergence_flow(K::AbstractMatrix{T}, H::T) where {T<:AbstractFloat}
     # Obtain effective length in depressurization and surpressurization zones
     H₁ = H / m                          # Depressurization lenth
     H₂ = H - H₁                         # Surpressurization length
-    H̃₁ = H₁ * K̃₁ / Kh1
-    H̃₂ = H₂ * K̃₂ / Kh2
+    H̃₁ = H₁ * K̃₁ / Kh1                  # Jacques et al. Eq. 31
+    H̃₂ = H₂ * K̃₂ / Kh2                  # Jacques et al. Eq. 31
     return H̃₁, H̃₂, K̃₁, K̃₂#, Kh1, Kv1, Kh2, Kv2
 end
 
