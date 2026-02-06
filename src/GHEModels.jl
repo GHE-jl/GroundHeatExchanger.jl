@@ -43,14 +43,16 @@ export ils, ics, fls, mils, mfls
 export _ils, _ics, _fls, _mils, _mfls       # For testing
 
 # Ground model export for standing column wells
-export βils, βils_outlet, Rb_SCW, convergence_flow
+export βils_outlet, βils, Rb_SCW, convergence_flow
 
 # Spatial superposition export
 export borefield_radius, g_matrix, bloc_matrix, successive_flux
 
 # Thermal resistance export
-export R_f, R_p, R_b_zeroth_order_multipole, R_b_first_order_multipole, R_b,
-    R_a_first_order_multipole, R_bₑ
+export R_f, R_p,
+    R_b_zeroth_order_multipole, R_b_first_order_multipole, R_b,
+    R_a_first_order_multipole,
+    R_bₑ
 
 # Convolution export
 export convolution, step_signal, state_transitions, convolution_ns

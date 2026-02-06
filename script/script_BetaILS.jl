@@ -25,7 +25,8 @@ Cf = 4.2e6                      # Volumetric heat capacity of the fluid [J/m³·
 Ku = 1e-7                       # Horizontal hydraulic conductivity of the ground [m/s]
 Kf = 1e-5                       # Fracture hydraulic conductivity of the ground [m/s]
 
-K = [495.0 Ku; 5.0 Kf]          # Hydraulic cond. with layer thicknesses and K values [m, m/s]
+# K = [495.0 Ku; 5.0 Kf]          # Hydraulic cond. with layer thicknesses and K values [m, m/s]
+K = [500 Ku]
 k = [500.0 ks Cs]               # Thermal properties with layer thicknesses [m, W/m·K, J/m³·K]
 
 # Define operating conditions for the SCW
@@ -66,16 +67,16 @@ KK = convergence_flow(K, H)
 # Verification: Borehole wall g-function for a SCW
 gb = Matrix{Float64}(undef, n, ns)
 for i in 1:length(ind)
-    gb[:, i] = βils(t, k, rb, ro, H, V[i], B[i] / V[i], f[i], K = K)
+    gb[:, i] = βils(t, k, K, rb, ro, H, V[i], B[i] / V[i], f[i])
 end
 
 # Evaluate the outlet transfer function for each set of operating conditions
 g = Matrix{Float64}(undef, n, ns)
 for i in 1:length(ind)
-    g[:, i] = βils_outlet(t, k, kp, rb, ro, ri, H, Hp, V[i], B[i] ./ V[i], T₀; K = K)
+    g[:, i] = βils_outlet(t, k, kp, K, rb, ro, ri, H, Hp, V[i], B[i] ./ V[i], T₀)
 end
 
-# @time g_test = βils_outlet(t, k, kp, rb, ro, ri, H, Hp, V[1], B[1] ./ V[1], T₀; K = K)
+# @time g_test = βils_outlet(t, k, kp, K, rb, ro, ri, H, Hp, V[1], B[1] ./ V[1], T₀)
 
 # Convert the outlet transfer function to an impulse of 1 °C (for comparison)
 gT = Matrix{Float64}(undef, n, ns)
@@ -85,7 +86,7 @@ end
 
 # Compute the non-stationary temperature evolution
 ΔT = convolution_ns(Qg / H, g, ind, state)
-T = ΔT .+ T₀
+T = ΔT .+ T₀        # Temperature below the submersible pump. Add Qp/(Cf*mean(V)) for T_out.
 Tverif = T[[1000, 5000, 10000, 25000, 35000, 40000]]
 
 # Plot the transfer functions
@@ -97,7 +98,7 @@ ax =  Axis(fig[1, 2], xlabel = L"$t$ (d)", ylabel = L"$V$ (L/min)")
 lines!(ax, t / (3600 * 24), Vp * 6e4, color = :blue, linewidth = 1.5)
 lines!(ax, t / (3600 * 24), Vb * 6e4, color = :green, linewidth = 1.5)
 
-ax = Axis(fig[2, 1:2], xlabel = L"$t$ (d)", ylabel = "Transfer function (-)", xscale = log10)
+ax = Axis(fig[2, 1:2], xlabel = L"$t$ (d)", ylabel = L"$g_{out}$ (°Cm/W)", xscale = log10)
 for i in 1:ns
 lines!(ax, t / (3600 * 24), g[:, i], linewidth = 1.5, label = "State $i")
     # label = "State $i: V=$(round(V[i]*6e4)) L/min, B=$(round(B[i]*6e4)) L/min")
@@ -107,4 +108,4 @@ axislegend(ax; position = :lt)
 ax = Axis(fig[3, 1:2], xlabel = L"$t$ (d)", ylabel = L"$T$ (°C)", )
 lines!(ax, t / (3600 * 24), T, color = :black, linewidth = 1.5)
 
-# display(fig);
+display(fig);
