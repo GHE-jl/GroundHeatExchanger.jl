@@ -5,6 +5,7 @@ standing column well (SCW).
 
 using BenchmarkTools
 using CairoMakie
+
 includet("../src/GHEModels.jl")
 using .GHEModels
 
@@ -91,6 +92,7 @@ Tverif = T[[1000, 5000, 10000, 25000, 35000, 40000]]
 
 # Plot the transfer functions
 fig = Figure(; size = (17 * 96 / 2.54, 18 * 96 / 2.54))
+
 ax = Axis(fig[1, 1], xlabel = L"$t$ (d)", ylabel = L"$Q$ (W)")
 lines!(ax, t / (3600 * 24), Qg, color = :red, linewidth = 1.5)
 
@@ -105,7 +107,7 @@ lines!(ax, t / (3600 * 24), g[:, i], linewidth = 1.5, label = "State $i")
 end
 axislegend(ax; position = :lt)
 
-ax = Axis(fig[3, 1:2], xlabel = L"$t$ (d)", ylabel = L"$T$ (°C)", )
+ax = Axis(fig[3, 1:2], xlabel = L"$t$ (d)", ylabel = L"$T$ (°C)")
 lines!(ax, t / (3600 * 24), T, color = :black, linewidth = 1.5)
 
 display(fig);

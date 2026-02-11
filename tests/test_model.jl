@@ -7,9 +7,6 @@ using CairoMakie
 
 includet("../src/GHEModels.jl")
 using .GHEModels
-includet("../src/FigOptions.jl")
-update_fig_theme()
-col = fig_color()
 
 # Define paremeters
 #t = range(3600., 3600*24*365*100, step=3600)                          # Time range (lin)

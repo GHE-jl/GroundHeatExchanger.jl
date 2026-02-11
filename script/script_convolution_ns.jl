@@ -5,12 +5,8 @@ Script showcasing the non-stationary convolution from Convolutions.jl.
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/Convolutions.jl")
-includet("../src/GroundModels.jl")
-
-includet("../src/FigOptions.jl")
-update_fig_theme()
-col = fig_color()
+includet("../src/GHEModels.jl")
+using .GHEModels
 
 # Define paremeters
 t = range(60.0, 3600.0*24*6, step=60) # Time (lin)

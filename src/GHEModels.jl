@@ -16,8 +16,6 @@ module GHEModels
 
 using Revise
 
-# Include files to make the package
-
 # Include models
 includet("GroundModels/ILS.jl")         # Infinite line source of Ingersol (1948)
 includet("GroundModels/ICS.jl")         # Infinite cylindrical source of Ingersol (1959)
@@ -36,7 +34,7 @@ includet("ThermalResistances.jl")
 includet("Convolutions.jl")
 
 # Include other varied functions
-includet("Utilities.jl")
+includet("Utils.jl")
 
 # Ground model export for closed-loop GHEs
 export ils, ics, fls, mils, mfls

@@ -28,11 +28,11 @@ Function that sets a logarithmic progression of node positions on a transfer fun
 # Output
     - id: A vector of length "n₀" of node positions on the transfer function [-]
 """
-function set_nodes(nt::Integer, n₀::Integer)
+function set_nodes(nt::Real, n₀::Integer)
     # Basic inputs
     n_tmp = n₀ - 1
     id = Vector{Integer}(undef, n_tmp)
-
+    # Fill the vector with node positions
     while length(id) < n₀
         empty!(id)
         for x in range(0, stop=log10(nt), length=n_tmp)

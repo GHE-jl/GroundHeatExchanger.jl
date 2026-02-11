@@ -24,7 +24,6 @@ The obtained transfer function is for an impulse of 1 W/m.
         - Column 1: Thickness [m]
         - Column 2: Hydraulic conductivitiy [m/s]
         - Example: [20 K₁; 80 K₂] for 2 layers of 20m and 80m thicknesses
-        - Note: For a single layer ground, the first value is equal to `H`.
     - `rb`: Borehole radius [m]
     - `ro`: Outer pipe radius [m]
     - `ri`: Inner pipe radius [m]
@@ -33,7 +32,6 @@ The obtained transfer function is for an impulse of 1 W/m.
     - `V`: Circulating fluid flow rate ([m³/s])
     - `β`: Fluid bleed rate ratio (between 0.01 and 1) [-]
     - `T₀`: Initial ground temperature [°C] (used for water properties)
-
 # Output
     - `g̃`: A transfer function for the outlet fluid temperature of SCW [°Cm/W]
 # Reference
@@ -48,7 +46,6 @@ function βils_outlet(t, k::AbstractMatrix{T}, kp::T, K::AbstractMatrix{T}, rb::
     H::T, Hp::T, V::T, β::T, T₀::T) where {T<:AbstractFloat}
     # 1. Compute the thermal resistance of the SCW
     Rfb, Rv, f = Rb_SCW(V, kp, rb, ro, ri, H, Hp, T₀)
-    println("Rbf: $Rfb, Rv: $Rv, f: $f")
 
     # 2. Compute the borehole wall g-function using the β-ILS model
     gb = βils(t, k, K, rb, ro, H, V, β, f) # Jacques et al. Eq. 8
@@ -75,7 +72,6 @@ length [W/m] to provide the borehole wall temperature.
         - Column 1: Thickness [m]
         - Column 2: Hydraulic conductivitiy [m/s]
         - Example: [20 K₁; 80 K₂] for 2 layers of 20m and 80m thicknesses
-        - Note: For a single layer ground, the first value is equal to `H`.
     - `V`: Circulating fluid flow rate ([m³/s])
     - `β`: Fluid bleed rate ratio (between 0.01 and 1) [-]
     - `H`: Borehole depth [m]
@@ -111,6 +107,7 @@ function βils(t, k::AbstractMatrix{T}, K::AbstractMatrix{T}, rb::T, ro::T, H::T
     rₘ = 100                                # Assumption: Drawdown horizontal influence radius
     # Jacques et al. Eq. 35
     ΔH̃ = ΔHa - (f * H * V^2 / (4 * π^2 * 9.81 * (rb - ro) * (rb^2 - ro^2)^2)) # Succion drawdown
+    ΔH̃ < 0 ? ΔH̃ = 0 : ΔH̃ = ΔH̃               # Avoid negative value of ΔH̃
     # Jacques et al. Eq. 34
     Ṽ = 2 * π * K̃₁* ΔH̃ * H̃₁ / (log(rₘ / rb)) # Rate of convergence flow caused by depressurization
 
@@ -247,29 +244,21 @@ function Rb_SCW(V::T, kp::T, rb::T, ro::T, ri::T, H::T, Hp::T, Tf::T, dT::T = 2.
         h[i] = Nu[i] * kf / (2 * rₑ[i])
         Rf[i] = 1 / (2 * np * π * rₑ[i] * h[i]) # Fluid thermal resistance
     end
-    println(Rf)
 
     # Convective thermal resistances for the fluid in pipe and borehole
     RCi = 1 / (Nu[1] * kf * π)          # In pipe at ri, Jacques et al. Eq. A. 41
     RCo = 1 / (Nu[2] * kf * π) * rₑ[2] / ro # In borehole at ro, Jacques et al. Eq. 42
     RCb = 1 / (Nu[2] * kf * π) * rₑ[2] / rb # In borehole at rb, Jacques et al. Eq. 43
-    # println(RCi, " ", RCo, " ", RCb)
 
     # Pipe thermal resistance
     Rp = log(ro / ri) / (2 * π * np * kp * Hp) # Jacques et al. Eq. A.40
-    # println("Rp: ", Rp)
 
     # Total borehole thermal resistance in SCW
     Rv = H / (cpf * ρf * V)             # Fluid flow hydraulic resistance, Jacques et al. Eq. 18
-    # println("Rv: ", Rv)
     R12 = RCi + RCo + Rp                # Internal thermal resistance, Jacques et al. Eq. 17
-    # println("R12: ", R12)
     Rsb = RCb * (1 + (Rv^2 / (3 * RCb * R12))) # Subsurface borehole resist., Jacques et al. Eq. 15
-    # println("Rsb: ", Rsb)
     Rfb = Rsb - RCb                     # Fluid thermal resistance of the borehole in a SCW
-    # println("Rfb: ", Rfb)
-    # Rfb2 = R12 - RCb                   # As implemented in the codes of Jacques et al. (2025)<
-    println()
+    # Rfb2 = R12 - RCb                    # As implemented in the codes of Jacques et al. (2025)
     return Rfb, Rv, f
 end
 

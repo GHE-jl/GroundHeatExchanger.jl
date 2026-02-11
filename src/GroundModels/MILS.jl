@@ -1,21 +1,17 @@
 using SpecialFunctions: besseli, besselk, expint
 using LinearAlgebra
 
-function facto_big(n)
-    return n > 18 ? factorial(big(n)) : factorial(n)
-end
-
 """
     _mils(t, ks, Cs, Cf, r, vD)
 
 Kernel function of the moving infinite line source based on Pasquier et Lamarche (2022). The
-response is based on an impulse of 1 W/m
+response is based on an impulse of 1 W/m.
 """
-function _mils(t::T, ks::T, Cs::T, Cf::T, vD::T, r::T) where {T<:AbstractFloat}
+function _mils(t::T, ks::T, Cs::T, Cf::T, r::T, vD::T) where {T<:AbstractFloat}
     # Initial inputs
-    ns = 20                         # Number of summand used. 20 is considered stable.
-    b = (r * vD * Cf / (4.0 * ks))^2   # b = (Peclet/4)^2
-    τ = (4.0 * ks / Cs) * (t / r^2)    # τ = 4 * Fo, and Fo = αt/r²
+    ns = 5                             # Number of summand used. Below 20 to avoid BigInt issues.
+    b = (r * vD * Cf / (4 * ks))^2      # b = (Peclet/4)^2
+    τ = (4 * ks / Cs) * (t / r^2)       # τ = 4 * Fo, and Fo = αt/r²
     
     # Pre-compute common Bessel and coefficient terms
     x = 2 * sqrt(b)
@@ -24,34 +20,28 @@ function _mils(t::T, ks::T, Cs::T, Cf::T, vD::T, r::T) where {T<:AbstractFloat}
     
     # MILS
     if τ <= (1 / b)
-        # Implementation of Eq. 20 (Early Time)
-        S1 = zero(T)
-        S2_accum = zero(T) # Cumulative sum for the inner S2
+        # Eq. 20 of Pasquier et Lamarche (2022) (Early Time)
+        S1, S2 = zero(T), zero(T)
         for i in 0:(ns-1)
             n = i + 1
-            # For factorial, switch to BigInt if largenr than 20
-            fᵢ = facto_big(i)
-            fₙ = facto_big(n)
-            # Inner sum: sum(b^n / n!^2) from 1 to m+1
-            S2_accum += b^n / fₙ^2
-            S1 += (-τ)^(T(i) + 1.0) * fᵢ * S2_accum
+            S2 = b^n / factorial(n)^2
+            S1 += (-τ)^(i + 1) * factorial(i) * S2
+            println("Eq. 20: S2: $S2, S1: $S1")
         end
         return a0 * (expint(inv(τ)) * I0 + exp(-inv(τ)) * S1)
     else
-        # Implementation of Eq. 25 (Late Time)
+        # Eq. 25 of Pasquier et Lamarche (2022) (Late Time)
         S1 = zero(T)
         for i in 0:(ns-1)
-            # Inner sum: sum(b^(n-1) / (m+n)!^2) from n=1 to ns
-            sum_S2 = zero(T)
+            S2 = zero(T)
             for n in 1:ns
-                f = facto_big(i + n)
-                sum_S2 += b^(n - 1) / f^2
+                i + n > 18 ? factorial(big(i + n)) : factorial(i + n)
+                S2 += b^(n - 1) / factorial(i + n)^2
             end
-            fᵢ = facto_big(i)
-            S1 += (fᵢ / (-τ)^(i + 1)) * sum_S2
+            S1 += float((factorial(i) / (-τ)^(i + 1)) * S2)
+            println("Eq. 25: S2: $S2, S1: $S1")
         end
-        K0 = besselk(zero(T), x)
-        return a0 * (2 * K0 - expint(b * τ) * I0 - exp(-b * τ) * S1)
+        return a0 * (2 * besselk(zero(T), x) - expint(b * τ) * I0 - exp(-b * τ) * S1)
     end
 end
 
