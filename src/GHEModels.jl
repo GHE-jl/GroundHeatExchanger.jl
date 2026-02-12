@@ -53,7 +53,7 @@ export R_f, R_p,
     R_bₑ
 
 # Convolution export
-export convolution, step_signal, state_transitions, convolution_ns
+export convolution, impulse_func, convolution_ns, impulse_func_ns, state_vector, state_indices
 
 # Other export
 export set_nodes, pchip_interpolation

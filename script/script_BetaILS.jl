@@ -39,7 +39,7 @@ Qg[1:60 * 12] = zeros(60 * 12)  # No injection for the first 12 hours
 
 # Pumping flow rate [m³/s]
 Vp = ones(n) * 175 / 60000
-Vp[60 * 24 * 15:end] .= 125 / 60000
+Vp[60 * 24 * 15 + 1:end] .= 125 / 60000
 
 # Bleed flow rate [m³/s]
 Vb = ones(n) * 17.5 / 60000
@@ -51,7 +51,7 @@ h_recircu = 0.22                # Observed drawdown due to pumping [m]
 r_influence = 100               # Influence radius of pumping [m]
 
 # Pre-processing of the input data
-ind, state, ind_unique = state_transitions(Vp, Vb)
+ind, state, ind_unique = state_indices(Vp, Vb)
 V = Vp[ind_unique]              # Unique pumping flow rates [m³/s]
 B = Vb[ind_unique]              # Unique bleed flow rates [m³/s]
 ns = length(ind)                # Number of states
@@ -111,3 +111,21 @@ ax = Axis(fig[3, 1:2], xlabel = L"$t$ (d)", ylabel = L"$T$ (°C)")
 lines!(ax, t / (3600 * 24), T, color = :black, linewidth = 1.5)
 
 display(fig);
+
+# Verify matrix construction of g
+#=
+t2 = set_nodes(12*365*24*3600.0, 130)
+H = Float64.([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 750, 1000, 1500])
+g̃ = zeros(Float64, 130, length(H))
+
+for (i, h) in enumerate(H)
+    g̃[:, i] = βils_outlet(t2, [h k.s Cs], k.p, [h K], r.b, r.o, r.i, h, h-10.0, V, β, T.g) * Cs * V / h
+end
+
+fig = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
+ax = Axis(fig[1, 1], xlabel = L"$t$ (y)", ylabel = L"$g$ (-)", xscale = log10)
+for i in eachindex(H)
+    lines!(ax, t2, g̃[:, i], linewidth = 1.5, label = "L = $(H[i])m")
+end
+display(fig);
+=#

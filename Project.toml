@@ -6,7 +6,6 @@ authors = ["Gabriel-Dion <dion.gabriel100@gmail.com>"]
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
@@ -17,7 +16,6 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 [compat]
 BenchmarkTools = "1.6.0"
 CairoMakie = "0.15.2"
-Clustering = "0.15.8"
 FFTW = "1.8.1"
 LinearAlgebra = "1.11.0"
 PCHIPInterpolation = "0.2.1"
