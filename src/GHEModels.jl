@@ -1,17 +1,3 @@
-"""
-Module that is used to define various analytical models used to simulate the temperature of 
-ground heat exchanger (GHE). The approach used is to compute a g-function (temperature at 
-the borehole wall) using the analytical model, and then using a convolution approach to 
-simulate the borehole outlet temperature.
-
-Features that are used include spatial superposition, computing the borehole thermal 
-resistance Rb through the first-order multipole method, ...
-
-Author: Gabriel Dion (dion.gabriel100@gmail.com)
-Date: 2026-01
-Julia version: 1.11.3
-"""
-
 module GHEModels
 
 using Revise

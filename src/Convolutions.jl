@@ -3,7 +3,6 @@ FFTW.set_num_threads(Sys.CPU_THREADS)
 
 """
     convolution(f, g)
-    convolution(Q, g)
 
 Performs a temporal superposition through a convolution product solved in the spectral domain using
 fast fourier transform. Padding is used to avoid circular convolution.
@@ -20,6 +19,8 @@ fast fourier transform. Padding is used to avoid circular convolution.
     - Pasquier, P., & Marcotte, D. (2013). Efficient computation of heat flux signals to ensure the
         reproduction of prescribed temperatures at several interacting heat sources. Applied Thermal
         Engineering, 59(1–2), 515–526. https://doi.org/10.1016/j.applthermaleng.2013.06.018
+# Example
+    convolution(impulse_func(Q), g) Compute the impulse function with impulse_func().
 """
 function convolution(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
     # Ensure f and g are vectors of the same length
@@ -44,21 +45,17 @@ function convolution(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:Abstr
     y = irfft(F_f .* F_g, pad)[1:n]
     return y
 end
-function convolution(Q::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
-    f = incremental_func(Q)
-    return convolution(f, g)
-end
 
 """
-    incremental_func(Q)
+    impulse_func(Q)
 
-Function to compute the incremental function for convolution.
+Function to compute the thermal impulse response for convolution.
 # Arguments
     - `Q`: Load functions (nₜ x 1) [W, W/m, °C]
 # Output
     - `f`: Incremental thermal load function (nₜ x 1) [W, W/m, °C]
 """
-function incremental_func(Q::AbstractVector{T}) where {T<:AbstractFloat}
+function impulse_func(Q::AbstractVector{T}) where {T<:AbstractFloat}
     n = length(Q)
     f = zeros(T, n)
     f[1] = Q[1]
@@ -101,7 +98,6 @@ function convolution_ns(f::AbstractMatrix{T}, g::AbstractMatrix{T},
     n, ns = size(f)                      # Number of time steps and states
     n == length(state_vec) || throw(ArgumentError("state_vec length mismatch"))
     n == size(g, 1) || throw(ArgumentError("g row mismatch"))
-    ns == size(g, 2) || throw(ArgumentError("g column mismatch"))
 
     # Setup the loop for non-stationary convolution in the spectral domain
     pad = 2 * n - 1                     # Padding length for convolution

@@ -96,6 +96,8 @@ function βils(t, k::AbstractMatrix{T}, K::AbstractMatrix{T}, rb::T, ro::T, H::T
     if size(K, 2) != 2
         error("K must be a (jx2) matrix of hydrogeological layers and their hydraulic properties.")
     end
+    # Replace β with a small value if it's 0
+    β = β == 0 ? 1e-9 : β
 
     # 1. Effective thermal properties (arithmetic weighted average)
     ks = sum(k[:, 2] .* k[:, 1]) / sum(k[:, 1])
@@ -132,7 +134,7 @@ function βils(t, k::AbstractMatrix{T}, K::AbstractMatrix{T}, rb::T, ro::T, H::T
     coefs₃ = [1.0011, 0.7339, 0.2383, -0.0100]
     ϵ = @. coefs₁ * Pe^coefs₂ + coefs₃      # Jacques et al. Eq. 7
     # Jacques et al. Eq. 4
-    h = @. ϵ[1] * (1 - ϵ[2] * β) * (1 + erf((sqrt(Pe) / ϵ[3]) * ((1 - ta^ϵ[4]) / (ta^ϵ[4])))) 
+    h = @. ϵ[1] * (1 - ϵ[2] * β) * (1 + erf((sqrt(Pe) / ϵ[3]) * ((1 - ta^ϵ[4]) / (ta^ϵ[4]))))
     
     # 6. Initial transfer function g_0 based on the SLI
     g₀ = ils(t, ks, Cs, rb)                 # Jacques et al. Eq. 3
