@@ -8,8 +8,8 @@ convolution.
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/GHEModels.jl")
-using .GHEModels
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define paremeters
 t = range(60.0, 3600.0*24*6, step=60) # Time (linear)
@@ -52,9 +52,10 @@ for (i, j) in enumerate(ind_unique)
 end
 
 # Non-stationary convolution
+dT1 = similar(t)
 f = impulse_func_ns(q, state_vec)
-@time dT1 = convolution_ns(f, g_fls, state_vec)
-@time dT2 = convolution_ns(f, g_fls, ind, state)
+@time convolution_ns!(dT1, f, g_fls)
+@time dT2 = convolution_ns(f, g_fls)
 @time dT3 = convolution_ns(q, g_fls, state_vec)
 @time dT4 = convolution_ns(q, g_fls, ind, state)
 
@@ -63,13 +64,15 @@ T_verif = dT1[[1000, 2800, 3000, 6000, 8000, 8600]]
 fig = Figure()
 
 ax = Axis(fig[1, 1], xlabel = L"$t$ (s)", ylabel = "g-function (-)", xscale = log10)
-for i in eachcol(g_fls)
-    lines!(ax, t, i, linewidth = 1.5)
+for (i, gi) in enumerate(eachcol(g_fls))
+    lines!(ax, t, gi, linewidth = 3, label="State $i")
 end
+axislegend(ax, position = :lt)
 
 ax = Axis(fig[2, 1], xlabel = L"$t$ (s)", ylabel = "dT (°C)")
-lines!(ax, t, dT1, color = :black, linestyle = :solid, linewidth = 1.5)
-lines!(ax, t, dT2, color = :grey, linestyle = :dash, linewidth = 1.5)
-lines!(ax, t, dT3, color = :blue, linestyle = :dashdot, linewidth = 1.5)
-lines!(ax, t, dT4, color = :green, linestyle = :dot, linewidth = 1.5)
+lines!(ax, t, dT1, color=:black, linestyle=:solid, linewidth=3, label="dT1")
+lines!(ax, t, dT2, color=:grey, linestyle=:dash, linewidth=3, label="dT2")
+lines!(ax, t, dT3, color=:blue, linestyle=:dashdot, linewidth=3, label="dT3")
+lines!(ax, t, dT4, color=:green, linestyle=:dot, linewidth=3, label="dT4")
+axislegend(ax, position=:lt, nbanks=2)
 display(fig);

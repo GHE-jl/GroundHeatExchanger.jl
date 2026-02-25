@@ -43,7 +43,7 @@ Computes the infinite cylindre source (ICS) model based on Carlsaw and Jaeger (1
 a g-function that requires a heat load per unit of borehole length [W/m] to provide the borehole 
 wall temperature.
 # Arguments
-    - `t`: Time vector [s]
+    - `t`: Time value or vector [s]
     - `ks`: Ground thermal conductivity [W/mK]
     - `Cs`: Ground volumetric specific heat [J/m³K]
     - `r`: Radius at which to computed (typically the borehole radius) [m]

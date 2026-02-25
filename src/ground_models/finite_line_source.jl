@@ -17,12 +17,10 @@ Computes the integrand of the finite line source model.
 """
 function _fls_integrand(s::T, r::T, H::T, D::T) where {T<:AbstractFloat}
     # Calculate terms
-    term1 = 2 * _ierf(H * s)
-    term2 = 2 * _ierf(H * s + 2 * D * s)
-    term3 = _ierf(2 * H * s + 2 * D * s)
-    term4 = _ierf(2 * D * s)
+    fun = (2 * _ierf(H * s)) + (2 * _ierf((H * s) + (2 * D * s))) - 
+        _ierf((2 * H * s) + (2 * D * s)) - _ierf(2 * D * s)
     
-    return (exp(-r^2 * s^2) * (term1 + term2 - term3 - term4)) / (H * s^2)
+    return (exp(-r^2 * s^2) * fun) / (H * s^2)
 end
 
 """
@@ -49,7 +47,7 @@ Computes the finite line source (FLS) model based on Claesson and Javed (2011). 
 g-function that requires a heat load per unit of borehole length [W/m] to provide the borehole
 wall temperature.
 # Arguments
-    - `t`: Time vector [s]
+    - `t`: Time value or vector [s]
     - `ks`: Ground thermal conductivity [W/mK]
     - `Cs`: Ground volumetric specific heat [J/m³K]
     - `r`: Radius at which to computed (typically the borehole radius) [m]

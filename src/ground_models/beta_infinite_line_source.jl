@@ -1,8 +1,7 @@
-
 using SpecialFunctions: erf
 using Roots: find_zero
-includet("ILS.jl")
-includet("../Convolutions.jl")
+includet("infinite_line_source.jl")
+includet("../temporal_superposition.jl")
 
 """
     βils_outlet(t, k, kp, K, rb, ro, ri, H, Hp, V, β, T₀)
@@ -29,7 +28,7 @@ The obtained transfer function is for an impulse of 1 W/m.
     - `ri`: Inner pipe radius [m]
     - `H`: Borehole depth [m]
     - `Hp`: Pipe length [m]
-    - `V`: Circulating fluid flow rate ([m³/s])
+    - `V`: Circulating fluid flow rate [m³/s]
     - `β`: Fluid bleed rate ratio (between 0.01 and 1) [-]
     - `T₀`: Initial ground temperature [°C] (used for water properties)
 # Output
@@ -140,7 +139,7 @@ function βils(t, k::AbstractMatrix{T}, K::AbstractMatrix{T}, rb::T, ro::T, H::T
     g₀ = ils(t, ks, Cs, rb)                 # Jacques et al. Eq. 3
 
     # 7. Combine initial and scaling function
-    gb = convolution(diff([0; g₀]), h)      # Jacques et al. Eq. 8
+    gb = convolution(g₀, h)      # Jacques et al. Eq. 8
     return gb
 end
 

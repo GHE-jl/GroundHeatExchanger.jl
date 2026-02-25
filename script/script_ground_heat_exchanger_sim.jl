@@ -1,17 +1,17 @@
 """
-Script testing the models from GHEModels.jl.
+Script showcasing the workflow for the whole GHE simulation
 """
 
 using BenchmarkTools
-using Plots
+using CairoMakie
 
-includet("../src/GHEModels.jl")
-using .GHEModels
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define paremeters
-#t = collect(range(3600.0, 3600.0*24*365*100, step=3600))                       # Time (lin)
-#ᵢ = set_nodes(length(t), 150)                                                   # Nodes
-t = collect(exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))) # Time (log)
+#t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
+#s = set_nodes(length(t), 150)                                                       # Nodes
+t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))          # Time (log)
 H = 150.0                       # Borehole depth
 D = 2.0                         # Borehole buried depth
 s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
@@ -31,21 +31,8 @@ C = (s = 2.11e6,                # Ground volumetric specific heat
     p = 1000.0,                 # Pipe density
     f = 1000.0)                 # Fluid density
 V = 30.0 / 60000                # Circulating flow rate
-vD = 1e-9                       # Groundwater flow
+vD = 1e-7                       # Groundwater flow
 #Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
 
-nx, ny, B = 1, 1, 5.
-xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_mfls_1 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
-
-nx, ny, B = 2, 2, 5.
-xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_mfls_2 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
-
-nx, ny, B = 10, 10, 5.
-xy = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_mfls_3 = mfls_borefield_I(t, k.s, C.s, r.b, H, D, vD, xy)
-
-#@time g_fls = fls(t, ks, Cs, rb, H, D)
-
-# Figure
+#TODO provide a realistic workflow to simulate the whole GHE system, including the computation of
+# the g-function, spatial superposition, the convolution and the temperature response.

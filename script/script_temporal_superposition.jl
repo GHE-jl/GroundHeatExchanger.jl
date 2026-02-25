@@ -6,8 +6,8 @@ using Random
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/GHEModels.jl")
-using .GHEModels
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define paremeters
 t = range(60.0, 3600.0*24*6, step=60) # Time (lin)

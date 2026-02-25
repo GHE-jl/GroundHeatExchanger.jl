@@ -6,7 +6,7 @@ exchanger (BHE) to form a ground heat exchanger (GHE). Current methods are:
 """
 
 using LinearAlgebra
-using FFTW
+# using FFTW
 
 """
     borefield_radius(xy)

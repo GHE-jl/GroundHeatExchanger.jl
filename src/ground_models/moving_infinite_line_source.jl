@@ -26,7 +26,6 @@ function _mils(t::T, ks::T, Cs::T, Cf::T, r::T, vD::T) where {T<:AbstractFloat}
             n = i + 1
             S2 = b^n / factorial(n)^2
             S1 += (-τ)^(i + 1) * factorial(i) * S2
-            println("Eq. 20: S2: $S2, S1: $S1")
         end
         return a0 * (expint(inv(τ)) * I0 + exp(-inv(τ)) * S1)
     else
@@ -39,7 +38,6 @@ function _mils(t::T, ks::T, Cs::T, Cf::T, r::T, vD::T) where {T<:AbstractFloat}
                 S2 += b^(n - 1) / factorial(i + n)^2
             end
             S1 += float((factorial(i) / (-τ)^(i + 1)) * S2)
-            println("Eq. 25: S2: $S2, S1: $S1")
         end
         return a0 * (2 * besselk(zero(T), x) - expint(b * τ) * I0 - exp(-b * τ) * S1)
     end
@@ -52,7 +50,7 @@ Compute the moving infinite line source (MILS) model based on Pasquier et Lamarc
 output is a g-function that requires a heat load per unit of borehole length [W/m] to provide the 
 borehole wall temperature.
 # Arguments
-    - `t`: Time vector [s]
+    - `t`: Time value or vector [s]
     - `ks`: Ground thermal conductivity [W/mK]
     - `Cs`: Ground volumetric specific heat [J/m³K]
     - `Cf`: Groundwater volumetric specific heat [J/m³K]

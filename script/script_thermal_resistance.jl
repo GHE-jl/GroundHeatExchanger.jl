@@ -5,7 +5,8 @@ single or double U-loop ground heat exchanger.
 
 using BenchmarkTools
 
-includet("../src/ThermalResistances.jl")
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define parameters
 r = (b = 0.08,                  # Borehole radius

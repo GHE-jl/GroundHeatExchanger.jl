@@ -1,26 +1,27 @@
-module GHEModels
+module GroundHeatExchanger
 
 using Revise
 
-# Include models
-includet("GroundModels/ILS.jl")         # Infinite line source of Ingersol (1948)
-includet("GroundModels/ICS.jl")         # Infinite cylindrical source of Ingersol (1959)
-includet("GroundModels/FLS.jl")         # Finite line source of Claesson and Javed (2011)
-includet("GroundModels/MILS.jl")        # Moving finite line source of Pasquier et Lamarche (2022)
-includet("GroundModels/MFLS.jl")        # Moving finite line source of Guo et al. (2021)
-includet("GroundModels/BetaILS.jl")     # Standing column well model of Jacques et al. (2025)
-
-# Include other spatial superpositions techniques
-includet("SpatialSuperpositions.jl")
-
+# Infinite line source of Ingersol (1948)
+includet("ground_models/infinite_line_source.jl")
+# Infinite cylindrical source of Ingersol (1959)
+includet("ground_models/infinite_cylindrical_source.jl")
+# Finite line source of Claesson and Javed (2011)
+includet("ground_models/finite_line_source.jl")
+# Moving finite line source of Pasquier et Lamarche (2022)
+includet("ground_models/moving_infinite_line_source.jl")
+# Moving finite line source of Guo et al. (2021)
+includet("ground_models/moving_finite_line_source.jl")
+# Standing column well model of Jacques et al. (2025)
+includet("ground_models/beta_infinite_line_source.jl")
+# Temporal superposition
+includet("temporal_superposition.jl")
+# Spatial superpositions techniques
+includet("spatial_superposition.jl")
 # Include thermal resistance Evaluation
-includet("ThermalResistances.jl")
-
-# Include convolution used in temporal superposition
-includet("Convolutions.jl")
-
+includet("borehole_thermal_resistance.jl")
 # Include other varied functions
-includet("Utils.jl")
+includet("utils.jl")
 
 # Ground model export for closed-loop GHEs
 export ils, ics, fls, mils, mfls

@@ -6,8 +6,8 @@ standing column well (SCW).
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/GHEModels.jl")
-using .GHEModels
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define physical parameters for the SCW
 H = 500.0                       # Borehole depth [m]
