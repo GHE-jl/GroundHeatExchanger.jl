@@ -1,2 +1,1 @@
-# GHEModels
-
+# GroundHeatExchanger.jl
