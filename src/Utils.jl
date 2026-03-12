@@ -104,27 +104,27 @@ function borefield_radius(xy::AbstractArray{<:Real}, rb::Real)
 end
 
 """
-    water_ρ(T::Real)
+    water_k(T::Real)
 
-Water density ρ(T), 0 ≤ T ≤ 100°C at 1 atm. The polynomial equation is a fit to the data from the 
-Engineering Toolbox. The values can be validates with a temperature vector `T = 0.1:1:100`.
+Water thermal conductivity k(T), 0 ≤ T ≤ 99.6°C at 1 bar. The polynomial equation is a fit to the 
+data from the Engineering Toolbox. The values can be validates with a temperature vector 
+`T = 0.1:1:100`.
 # Argument
     - T: Temperature [°C]
 # Output
-    - ρ: Density [kg/m³]
+    - k: Thermal conductivity [W/mK]
 # Reference
-    - The Engineering ToolBox (2003). Water Density, Specific Weight and Thermal Expansion 
-        Coefficients - Temperature and Pressure Dependence. [online] Available at: 
-        https://www.engineeringtoolbox.com/water-density-specific-weight-d_595.html 
-        [Accessed 2026-01-14].
+    - The Engineering ToolBox (2018). Thermal Conductivity of Water: Temperature and Pressure Data. 
+        [online] Available at: https://www.engineeringtoolbox.com/water-liquid-gas-thermal-
+        conductivity-temperature-pressure-d_2012.html [Accessed 2026-01-14].
 """
-function water_ρ(T::Real)::Float64
+function water_k(T::Real)
     if T < 0 || T > 100
          @warn "Temperature out of range (0 ≤ T ≤ 100°C).
-         `water_ρ` fits data from Engineering Toolbox, and may not be accurate outside this range."
+         `water_k` fits data from Engineering Toolbox, and may not be accurate outside this range."
     end
-    return 999.8475436930158 + 0.06180756931966996*T - 0.008309049138917115*T^2 + 
-        6.35713412865478e-5*T^3 - 3.8404497053894326e-7*T^4 + 1.0249871031879443e-9*T^5
+    return 0.5557250521318174 + 0.002490814640452007*T - 2.1170044416971473e-5*T^2 + 
+        1.285515973680875e-7*T^3 - 4.546428806458628e-10*T^4 + 9.750314739837196e-14*T^5
 end
 
 """
@@ -153,27 +153,27 @@ function water_cp(T::Real)
 end
 
 """
-    water_k(T::Real)
+    water_ρ(T::Real)
 
-Water thermal conductivity k(T), 0 ≤ T ≤ 99.6°C at 1 bar. The polynomial equation is a fit to the 
-data from the Engineering Toolbox. The values can be validates with a temperature vector 
-`T = 0.1:1:100`.
+Water density ρ(T), 0 ≤ T ≤ 100°C at 1 atm. The polynomial equation is a fit to the data from the 
+Engineering Toolbox. The values can be validates with a temperature vector `T = 0.1:1:100`.
 # Argument
     - T: Temperature [°C]
 # Output
-    - k: Thermal conductivity [W/mK]
+    - ρ: Density [kg/m³]
 # Reference
-    - The Engineering ToolBox (2018). Thermal Conductivity of Water: Temperature and Pressure Data. 
-        [online] Available at: https://www.engineeringtoolbox.com/water-liquid-gas-thermal-
-        conductivity-temperature-pressure-d_2012.html [Accessed 2026-01-14].
+    - The Engineering ToolBox (2003). Water Density, Specific Weight and Thermal Expansion 
+        Coefficients - Temperature and Pressure Dependence. [online] Available at: 
+        https://www.engineeringtoolbox.com/water-density-specific-weight-d_595.html 
+        [Accessed 2026-01-14].
 """
-function water_k(T::Real)
+function water_ρ(T::Real)::Float64
     if T < 0 || T > 100
          @warn "Temperature out of range (0 ≤ T ≤ 100°C).
-         `water_k` fits data from Engineering Toolbox, and may not be accurate outside this range."
+         `water_ρ` fits data from Engineering Toolbox, and may not be accurate outside this range."
     end
-    return 0.5557250521318174 + 0.002490814640452007*T - 2.1170044416971473e-5*T^2 + 
-        1.285515973680875e-7*T^3 - 4.546428806458628e-10*T^4 + 9.750314739837196e-14*T^5
+    return 999.8475436930158 + 0.06180756931966996*T - 0.008309049138917115*T^2 + 
+        6.35713412865478e-5*T^3 - 3.8404497053894326e-7*T^4 + 1.0249871031879443e-9*T^5
 end
 
 """
