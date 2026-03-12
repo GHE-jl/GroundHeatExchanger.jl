@@ -5,61 +5,34 @@ Script testing the spatial superposition with the finite line source (FLS) model
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/GHEModels.jl")
-using .GHEModels
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define paremeters
-#t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
-#s = set_nodes(length(t), 150)                                                       # Nodes
-t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))          # Time (log)
-H = 150.0                       # Borehole depth
-D = 2.0                         # Borehole buried depth
-s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
-r = (b = 0.08,                  # Borehole radius
-    o = 0.022,                  # Pipe outlet radius
-    i = 0.017)                  # Pipe inlet radius
-k = (s = 3.0,                   # Ground thermal conductivity
-    g = 1.6,                    # Grout thermal conductivity
-    p = 0.4,                    # Pipe thermal conductivity
-    f = 0.6)                    # Fluid thermal conductivity
-C = (s = 2.11e6,                # Ground volumetric specific heat
-    g = 2.25e6,                 # Grout volumetric specific heat
-    p = 1.9e6,                  # Pipe volumetric specific heat
-    f = 4.2e6)                  # Fluid volumetric specific heat
-ρ = (s = 1000.0,                # Groud density
-    g = 1000.0,                 # Grout density
-    p = 1000.0,                 # Pipe density
-    f = 1000.0)                 # Fluid density
-V = 30.0 / 60000                # Circulating flow rate
-vD = 1e-7                       # Groundwater flow
-#Q = 10000.0 * ones(length(t)) + (300 * randn(length(t))) # Constant heating power signal
+t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
 
-# Spatial superposition with bloc matrix
-nx, ny, B = 1, 1, 5.
-xy1 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-@time g_fls_1_direct = fls(t, k.s, C.s, r.b, H, D)
-@time g_fls_1_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy1)
-@time g_fls_1_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy1)
+# Define the borefield geometry
+nx, ny, B = 5, 5, 5.
+xy = borefield_xy(nx, ny, B)
+r, rᵤ, rᵥ, rᵢ, θ, nb = borefield_radius(xy, rb)
 
-# nx, ny, B = 2, 2, 5.
-# xy2 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-# @time g_fls_2_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy2)
-# @time g_fls_2_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy2)
+# Define 3D matrix of g-function for different radius of the borefield
+g = fls(t, H, r, D, ks, Cs)
 
-# nx, ny, B = 5, 5, 5.
-# xy3 = B * hcat([[i, j] for i in 1:nx for j in 1:ny]...)'.-B
-# @time g_fls_3_bm = bloc_matrix(t, k.s, C.s, r.b, H, D, xy3)
-# @time g_fls_3_sf = successive_flux(t, k.s, C.s, r.b, H, D, xy3)
+# Spatial superposition with bloc matrix (around 100x slower than successive flux)
+@time g_bm1 = bloc_matrix(g)
+@time g_bm2 = bloc_matrix(t, H, rb, D, ks, Cs, xy)
+
+# Spatial superposition with successive flux
+@time g_sf1 = successive_flux(g)
+@time g_sf2 = successive_flux(t, H, rb, D, ks, Cs, xy)
 
 # Figure
-f = Figure(; size = (17 * 96 / 2.54, 12 * 96 / 2.54))
-ax = Axis(f[1, 1], xlabel = L"$t$ (s)", ylabel = L"$g$ (°Cm/W)", xscale = log10)
-lines!(ax, t, g_fls_1_direct, color = "black", linestyle = :solid, linewidth = 2, label = "FLS")
-lines!(ax, t, g_fls_1_bm, color = "cyan", linestyle = :solid, label = "Bloc matrix 1x1")
-lines!(ax, t, g_fls_1_sf, color = "black", linestyle = :dash, label = "Successive flux 1x1")
-# lines!(ax, t, g_fls_2_bm, color = "green", linestyle = :solid, label = "Bloc matrix 2x2")
-# lines!(ax, t, g_fls_2_sf, color = "black", linestyle = :dash, label = "Successive flux 2x2")
-# lines!(ax, t, g_fls_3_bm, color = "red", linestyle = :solid, label = "Bloc matrix 5x5")
-# lines!(ax, t, g_fls_3_sf, color = "black", linestyle = :dash, label = "Successive flux 5x5")
+fig = Figure()
+ax = Axis(fig[1, 1], xlabel = L"$t$ (s)", ylabel = L"$g$ (°Cm/W)", xscale = log10)
+lines!(ax, t, g_bm1, color = "red", linewidth=3, linestyle = :solid, label = "Bloc matrix $nx x $ny")
+lines!(ax, t, g_bm2, color = "purple", linewidth=2.5, linestyle = :dashdot, label = "Bloc matrix $nx x $ny")
+lines!(ax, t, g_sf1, color = "blue", linewidth=2, linestyle = :dash, label = "Successive flux $nx x $ny")
+lines!(ax, t, g_sf2, color = "green", linewidth=1.5, linestyle = :dot, label = "Successive flux $nx x $ny")
 axislegend(ax, position = :lt)
-display(f)
+display(fig)

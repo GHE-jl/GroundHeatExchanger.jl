@@ -11,9 +11,7 @@ Notes:
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/ground_models/infinite_line_source.jl")
 includet("../src/temporal_superposition.jl")
-includet("../src/utils.jl")
 
 # Define varying step heat flux vectors with even and uneven time steps
 t_var = [0, 10, 15, 40, 70, 85] * 3600          # Time steps in seconds (uneven)

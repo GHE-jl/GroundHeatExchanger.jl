@@ -20,12 +20,12 @@ function _ics_integrand(s::T, r̃::T, t̃::T) where {T<:AbstractFloat}
 end
 
 """
-    _ics(t, ks, Cs, r, rc)
+    _ics(t, r, rc, ks, Cs)
 
 Kernel function for the infinite cylindrical source model based on Carlsaw and Jaeger (1959). The 
 response function is based on an impulse of 1 W/m.
 """
-function _ics(t::T, ks::T, Cs::T, r::T, rc::T) where {T<:AbstractFloat}
+function _ics(t::T, r::T, rc::T, ks::T, Cs::T) where {T<:AbstractFloat}
     # Define parameters
     r̃ = r / rc
     t̃ = (t * ks) / (Cs * rc^2)
@@ -37,17 +37,17 @@ function _ics(t::T, ks::T, Cs::T, r::T, rc::T) where {T<:AbstractFloat}
 end
 
 """
-    ics(t, ks, Cs, r, rc)
+    ics(t, r, rc, ks, Cs)
 
 Computes the infinite cylindre source (ICS) model based on Carlsaw and Jaeger (1959). The output is
 a g-function that requires a heat load per unit of borehole length [W/m] to provide the borehole 
 wall temperature.
 # Arguments
     - `t`: Time value or vector [s]
-    - `ks`: Ground thermal conductivity [W/mK]
-    - `Cs`: Ground volumetric specific heat [J/m³K]
     - `r`: Radius at which to computed (typically the borehole radius) [m]
     - `rc`: Radius of the cylinder [m]
+    - `ks`: Ground thermal conductivity [W/mK]
+    - `Cs`: Ground volumetric specific heat [J/m³K]
 # Output
     - `g`: A g-function corresponding to the borehole wall temperature of the borehole [°Cm/W]
 # Reference:
@@ -56,62 +56,19 @@ wall temperature.
 # Example
     ics(60:60:3600, 3.0, 2e6, 0.076, 0.076)
 """
-function ics(t::Real, ks::Real, Cs::Real, r::Real, rm::Real = r)
-    T = float(promote_type(typeof(t), typeof(ks), typeof(Cs), typeof(r), typeof(rm)))
-    return _ics(T(t), T(ks), T(Cs), T(r), T(rm))
+function ics(t::Real, r::Real, rc::Real, ks::Real, Cs::Real)
+    T = float(promote_type(typeof(t), typeof(r), typeof(rc), typeof(ks), typeof(Cs)))
+    return _ics(T(t), T(r), T(rc), T(ks), T(Cs))
 end
-
-function ics(t::AbstractVector{<:Real}, ks::Real, Cs::Real, r::Real, rm::Real = r)
+function ics(t::AbstractVector{<:Real}, r::Real, rc::Real, ks::Real, Cs::Real)
     # Check type
-    T = float(promote_type(eltype(t), typeof(ks), typeof(Cs), typeof(r), typeof(rm)))
+    T = float(promote_type(eltype(t), typeof(r), typeof(rc), typeof(ks), typeof(Cs)))
     t_T  = convert(Vector{T}, t)
     
     # Preallocate and ICS
     g = similar(t_T)
     @inbounds @simd for i in eachindex(t_T)
-        g[i] = _ics(t_T[i], T(ks), T(Cs), T(r), T(rm))
+        g[i] = _ics(t_T[i], T(r), T(rc), T(ks), T(Cs))
     end
     return g
-end
-
-function ics!(g::AbstractVector{T}, t::AbstractVector, ks::Real, Cs::Real, r::Real, rm::Real = r
-    ) where {T<:AbstractFloat}
-    # Check for same vector length
-    @assert length(g) == length(t)
-
-    # Convert parameters to T once
-    ks_T, Cs_T, rb_T, rm_T = T(ks), T(Cs), T(r), T(rm)
-    
-    # ICS
-    @inbounds @simd for i in eachindex(g, t)
-        g[i] = _ics(T(t[i]), ks_T, Cs_T, rb_T, rm_T)
-    end
-    return g
-end
-
-function ics_old(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, r::Real, rm::Real = r)
-    # Set initial parameters
-    nt = length(t)                      # Number of time step
-    r̃ = float(rm / r)                  # Ratio of location to the temperature and cylinder radius
-    t̃ = t .* ks ./ (Cs * r^2)          # Fourier number
-    g = Vector{Float64}(undef, nt)      # Preallocation
-
-    function integrand_ics(s::Real, r̃::Real, tᵢ::Real)
-        """
-            integrand_ics(s, r̃, tᵢ)
-
-        Integrand of the ICS model for scalar call.
-        """
-        if s < 1e-12
-            return 0.0
-        end
-        return (exp(-s^2 * tᵢ) - 1) * (((besselj0(r̃ * s) * bessely1(s)) -
-            (bessely0(r̃ * s) * besselj1(s))) / (s^2 * (besselj1(s)^2 + bessely1(s)^2)))
-    end
-
-    for (i, tᵢ) in enumerate(t̃)
-        integral, _ = quadgk(s -> integrand_ics(s, r̃, tᵢ), 1e-6, Inf, rtol = 1e-6)
-        g[i] = integral
-    end
-    return g / (π^2 * ks)
 end

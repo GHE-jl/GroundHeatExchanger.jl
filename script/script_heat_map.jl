@@ -3,16 +3,11 @@ Script to generate heat maps using the moving finite line source model.
 """
 
 using CairoMakie
+includet("../src/GroundHeatExchanger.jl")
+using .GroundHeatExchanger
 
 # Define paremeters
-H = 150.0                       # Borehole depth
-D = 2.0                         # Borehole buried depth
-r = 0.08                        # Radius at which to compute the models
-rb = 0.08                       # Borehole radius
-ks = 3.0                        # Ground thermal conductivity
-Cs = 2.11e6                     # Ground volumetric specific heat
-Cf = 4.2e6                      # Fluid volumetric specific heat
-vD = 1e-6                       # Groundwater flow
+t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
 
 t = [3600.0 * 24, 3600.0 * 24 * 30, 3600.0 * 24 * 365, 
          3600.0 * 24 * 365 * 5, 3600.0 * 24 * 365 * 10, 3600.0 * 24 * 365 * 25]

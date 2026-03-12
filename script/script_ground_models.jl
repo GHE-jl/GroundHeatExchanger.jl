@@ -9,23 +9,13 @@ includet("../src/GroundHeatExchanger.jl")
 using .GroundHeatExchanger
 
 # Define paremeters
-#t = range(3600.0, 3600.0*24*365*100, step=3600)                                     # Time (lin)
-#s = set_nodes(length(t), 150)                                                       # Nodes
-t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500))          # Time (log)
-H = 150.0                       # Borehole depth
-D = 2.0                         # Borehole buried depth
-r = 0.08                        # Radius at which to compute the models
-rb = 0.08                       # Borehole radius
-ks = 3.0                        # Ground thermal conductivity
-Cs = 2.11e6                     # Ground volumetric specific heat
-Cf = 4.2e6                      # Fluid volumetric specific heat
-vD = 5e-7                       # Groundwater flow
+t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
 
 # Run models
-@time g_ils = ils(t, ks, Cs, r)
-@time g_ics = ics(t, ks, Cs, r)
-@time g_fls = fls(t, ks, Cs, r, H, D)
-@time g_mils = mils(t, ks, Cs, Cf, r, vD)
+@time g_ils = ils(t, ks, Cs, rb)
+@time g_ics = ics(t, ks, Cs, rb)
+@time g_fls = fls(t, ks, Cs, rb, H, D)
+@time g_mils = mils(t, ks, Cs, Cf, rb, vD)
 @time g_mfls = mfls(t, ks, Cs, Cf, [0, 0], rb, H, D, vD)
 
 t̃ = t / (3600 * 24 * 365)

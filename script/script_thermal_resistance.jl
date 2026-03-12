@@ -9,54 +9,38 @@ includet("../src/GroundHeatExchanger.jl")
 using .GroundHeatExchanger
 
 # Define parameters
-r = (b = 0.08,                  # Borehole radius
-    o = 0.022,                  # Pipe outlet radius
-    i = 0.017)                  # Pipe inlet radius
-k = (s = 3.0,                   # Ground thermal conductivity
-    g = 1.6,                    # Grout thermal conductivity
-    p = 0.4,                    # Pipe thermal conductivity
-    f = 0.6)                    # Fluid thermal conductivity
-c = (s = 2.11e3,                # Ground specific heat
-    g = 2.25e3,                 # Grout specific heat
-    p = 1.9e3,                  # Pipe specific heat
-    f = 4.2e3)                  # Fluid specific heat
-ρ = (s = 1000.0,                # Groud density
-    g = 1000.0,                 # Grout density
-    p = 1000.0,                 # Pipe density
-    f = 1000.0)                 # Fluid density
-s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
-V = 30.0 / 60000                # Circulating flow rate
-V̇ = V / (π * r.i^2)             # Fluid speed in pipe
-μf = 1.3e-3                     # Fluid viscosity
-H = 150.0                       # Borehole length
-n = 2                           # Number of pipes in the borehole
+_, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
+V̇ = V / (π * ri^2)
+cf = Cf / ρf
 
 # Fluid thermal resistance
-@show Rf = R_f(V̇, k.f, r.i, c.f, ρ.f, μf)
-V̇ᵥ = range(5, 60, 1000) / (60000 * π * r.i^2)
-RF = zeros(1000)
-for (i, j) in enumerate(V̇ᵥ)
-    RF[i] = R_f(j, k.f, r.i, c.f, ρ.f, μf)
-end
+# Calculate Reynolds and Prandtl numbers
+@show Re = Reynold(V̇, ri, ρf, μf)
+@show Pr = Prandtl(kf, cf, μf)
 
-# Pipe thermal resistance
-@show Rp = R_p(k.p, r.o, r.i)
+# Calculate Nusselt number
+@show Nu1 = Nusselt(Re, Pr, ri, ϵ)
+@show Nu2 = Nusselt(V̇, ri, kf, cf, ρf, μf, ϵ)
 
-# Grout thermal resistance
-@show Rg_0 = R_b_zeroth_order_multipole(k.s, k.g, r.b, r.o, s, 0.0, 0.0)
-@show Rg_1 = R_b_first_order_multipole(k.s, k.g, r.b, r.o, s, 0.0, 0.0)
+# Calculate fluid resistance
+@show Rf_1 = resistance_fluid(Nu1, ri, kf)
+@show Rf_2 = resistance_fluid(V̇, ri, kf, cf, ρf, μf, ϵ)
 
-# Single U-loop
-@show Rb_0 = R_b_zeroth_order_multipole(k.s, k.g, r.b, r.o, s, Rp, Rf)
-@show Rb_1 = R_b_first_order_multipole(k.s, k.g, r.b, r.o, s, Rp, Rf)
+# Pipe thermal resistance (single U-loop)
+@show Rp = resistance_pipe(ro, ri, kp, 2)
 
-@show Rb = R_b(V̇, k.s, k.g, k.p, k.f, r.b, r.o, r.i, s, n, c.f, ρ.f, μf)
+# Borehole thermal resistance
+@show Rb_0_1 = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf_1, 0)
+@show Rb_0_2 = resistance_borehole_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ, 0)
+@show Rb_1_1 = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf_1, 1)
+@show Rb_1_2 = resistance_borehole_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ, 1)
 
-@show Ra = R_a_first_order_multipole(k.s, k.g, r.b, r.o, s, Rp, Rf)
+# Total internal thermal resistance
+@show Ra_0_1 = resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf_1, 0)
+@show Ra_0_2 = resistance_total_internal_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ, 0)
+@show Ra_1_1 = resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf_1, 1)
+@show Ra_1_2 = resistance_total_internal_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ, 1)
 
-@show Rbₑ1 = R_bₑ(V, c.f, ρ.f, 150.0, Rb, Ra)
-@show Rbₑ2 = R_bₑ(V, k.s, k.g, r.b, r.o, s, c.f, ρ.f, 150.0, Rp, Rf)
-@show Rbₑ3 = R_bₑ(V, k.s, k.g, k.p, k.f, r.b, r.o, r.i, s, c.f, ρ.f, μf, H)
-
-# Validation with data from Javed and Spitler 2017
-#Rg = R_b_first_order_multipole(3.0, 0.6, 0.192, 0.032, 2*0.032, 0.00, 0.0) # see Figure 6. (left)
+@show Rbe_1 = resistance_borehole_effective(V, H, cf, ρf, Rb_1_1, Ra_1_1)
+@show Rbe_2 = resistance_borehole_effective(V, H, s, rb, ro, ks, kg, cf, ρf, Rp, Rf_1)
+@show Rbe_3 = resistance_borehole_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)

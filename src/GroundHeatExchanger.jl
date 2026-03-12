@@ -14,36 +14,45 @@ includet("ground_models/moving_infinite_line_source.jl")
 includet("ground_models/moving_finite_line_source.jl")
 # Standing column well model of Jacques et al. (2025)
 includet("ground_models/beta_infinite_line_source.jl")
+
 # Temporal superposition
 includet("temporal_superposition.jl")
+
 # Spatial superpositions techniques
 includet("spatial_superposition.jl")
-# Include thermal resistance Evaluation
-includet("borehole_thermal_resistance.jl")
+
+# Include thermal resistance evaluation
+includet("borehole_thermal_resistance/resistance_fluid.jl")
+includet("borehole_thermal_resistance/resistance_pipe.jl")
+includet("borehole_thermal_resistance/resistance_borehole.jl")
+
 # Include other varied functions
 includet("utils.jl")
 
 # Ground model export for closed-loop GHEs
 export ils, ics, fls, mils, mfls
-export _ils, _ics, _fls, _mils, _mfls       # For testing
 
-# Ground model export for standing column wells
+# Ground model export for standing column wells (probably to be moved to a separate module)
 export βils_outlet, βils, Rb_SCW, convergence_flow
 
+# Temporal superposition export
+export convolution, convolutionf, impulse_func, 
+    convolution_ns, impulse_func_ns, state_vector, state_indices
+
 # Spatial superposition export
-export borefield_radius, g_matrix, bloc_matrix, successive_flux
+export bloc_matrix, successive_flux
 
 # Thermal resistance export
-export R_f, R_p,
-    R_b_zeroth_order_multipole, R_b_first_order_multipole, R_b,
-    R_a_first_order_multipole,
-    R_bₑ
+export Reynold, Prandtl, Nusselt, friction_factor_Colebrook_White, resistance_fluid,
+    resistance_pipe,
+    resistance_borehole_multipole, resistance_total_internal_multipole,
+    resistance_borehole_effective
 
-# Convolution export
-export convolution, impulse_func, convolution_ns, impulse_func_ns, state_vector, state_indices
-
-# Other export
-export set_nodes, pchip_interpolation
+# Utils export
+export pchip_interpolation, set_nodes, borefield_xy, borefield_radius,
+    water_ρ, water_cp, water_k, water_μ,
+    head_loss_Darcy_Weisbach,
+    GHE
 
 # Temperature simulations
 export g_model, T_f

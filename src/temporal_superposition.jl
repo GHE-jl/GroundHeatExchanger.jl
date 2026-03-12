@@ -1,15 +1,18 @@
-using DSP
 using LinearAlgebra
+using DSP: conv, conv!
 
 """
     convolution(q, g)
+    convolutionf(f, g)
 
 Function that performs temporal superposition through a convolution product solved in the spectral
-domain using fast fourier transform. Padding is used to avoid circular convolution.
+domain using fast fourier transform O(nlogn). Padding is used to avoid circular convolution.
 Time steps are assumed to be equally spaced. The convolution is performed with the incremental
-thermal load function, which is computed from the load vector `q` using the `impulse_func` function.
+thermal load function, which is computed from the load vector `q` using the `impulse_func` function
+in the "convolution()" function, but is already pre-computed in the "convolutionf()" function.
 # Arguments
     - `q`: Load functions (nₜ x 1) [W/m, W, °C]
+    - `f`: Incremental thermal load function (nₜ x 1) [W/m, W, °C] (impulse_func())
     - `g`: Transfer function (or g-function) (nₜ x 1) [°Cm/W, °C/W, -]
 # Output
     - Convolved signal. Typically temperature response (nₜ x 1) [°C].
@@ -22,11 +25,18 @@ thermal load function, which is computed from the load vector `q` using the `imp
         Engineering, 59(1–2), 515–526. https://doi.org/10.1016/j.applthermaleng.2013.06.018
 """
 function convolution(q::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
-    # Check if Q and g are vectors of the same length
+    # Check if q and g are vectors of the same length
     n = length(q)
+    n == length(g) || throw(ArgumentError("Vectors q and g must have the same length"))
+    # Compute the impulse function from the load vector q (DSP.conv function)
+    return @view conv(impulse_func(q), g)[1:n]
+end
+function convolutionf(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
+    # Check if f and g are vectors of the same length
+    n = length(f)
     n == length(g) || throw(ArgumentError("Vectors f and g must have the same length"))
     # Compute the impulse function from the load vector Q (DSP.conv function)
-    return @view conv(impulse_func(q), g)[1:n]
+    return @view conv(f, g)[1:n]
 end
 
 """
@@ -243,7 +253,7 @@ end
 
 Function that performs temporal superposition through a convolution product solved in the time
 domain. This function is not optimized for large vectors and is only provided for small vector with
-even time steps. O(n) complexity.
+even time steps. O(n²) complexity.
 # Arguments
     - `q`: Load functions (nₜ x 1) [W/m, W, °C]
     - `g`: Transfer function (or g-function) (nₜ x 1) [°Cm/W, °C/W, -]
@@ -298,8 +308,8 @@ function convolution_matrix(q::AbstractVector{T}, g::AbstractVector{T}
 end
 
 """
-    convolution_old!(y, f, g)
-    convolution_old(f, g)
+    convolution_FFTW!(y, f, g)
+    convolution_FFTW(f, g)
 
 Performs a temporal superposition through a convolution product solved in the spectral domain using
 fast fourier transform. Padding is used to avoid circular convolution.
@@ -322,7 +332,7 @@ fast fourier transform. Padding is used to avoid circular convolution.
     convolution!(y, impulse_func(Q), g; plan))
     convolution(impulse_func(Q), g) # Compute the impulse function with impulse_func().
 """
-function convolution_old!(y::AbstractVector{T}, f::AbstractVector{T}, g::AbstractVector{T};
+function convolution_FFTW!(y::AbstractVector{T}, f::AbstractVector{T}, g::AbstractVector{T};
     plan = nothing) where {T<:AbstractFloat}
     # Ensure f and g are vectors of the same length
     n = length(f)
@@ -357,12 +367,36 @@ function convolution_old!(y::AbstractVector{T}, f::AbstractVector{T}, g::Abstrac
     res = irfft(F_f, pad)
     return y .= view(res, 1:n)
 end
-function convolution_old(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
+function convolution_FFTW(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
     y = similar(f)
-    return convolution!(y, f, g)
+    return convolution_FFTW!(y, f, g)
 end
 
-function convolution_ns_old(f::AbstractMatrix{T}, g::AbstractMatrix{T}) where {T<:AbstractFloat}
+"""
+    convolution_FFTW_ns(f, g)
+
+Function that performs temporal superposition for varying operating conditions through a
+non-stationary convolution solved in the spectral domain. The varying operating conditions are
+defined by the `state_vec`, which assigns each time step to a specific state. Each state corresponds
+to a specific column in the transfer function matrix `g`. Padding is used to avoid circular
+convolution.
+# Arguments
+    - `f`: Incremental thermal load function (nₜ x nₛ) [W/m, W, °C] (incremental_func_ns())
+    - `q`: Load functions (nₜ x 1) [W/m, W, °C]
+    - `g`: Matrix of transfer functions (or g-function) (nₜ x nₛ) [°Cm/W, °C/W, -]
+        - `nₛ`: Number of states (operating conditions).
+    - `state_vec`: State index for each time step (nₜ x 1) [-], with values from 1 to nₛ.
+    - `ind`: Indices of state change on the vectors [-]
+    - `state`: State index for each segment delimited by the indices [-]
+# Output
+    - `dT`: Convolved signal. Typically temperature response (nₜ x 1) [°C].
+# Reference
+    - Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental
+        validation of non-stationary convolutions for the fast simulation of time-variant flowrates
+        in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219.
+        https://doi.org/10.1080/23744731.2023.2279468
+"""
+function convolution_FFTW_ns(f::AbstractMatrix{T}, g::AbstractMatrix{T}) where {T<:AbstractFloat}
     # Check if all vectors have the same length
     n, ns = size(f)                      # Number of time steps and states
     n == size(g, 1) || throw(ArgumentError("g row mismatch"))

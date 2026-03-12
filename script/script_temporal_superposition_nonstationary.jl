@@ -1,5 +1,5 @@
 """
-Test for the non-stationary convolution from Convolutions.jl. This script does not
+Test for the non-stationary convolution from temporal_superposition.jl. This script does not
 correspond to real application of the non-stationary convolution, as it is more for operating
 conditions. Here, the test allows comparison with the Matlab implementation of the non-stationary
 convolution.
@@ -8,29 +8,12 @@ convolution.
 using BenchmarkTools
 using CairoMakie
 
-includet("../src/GroundHeatExchanger.jl")
-using .GroundHeatExchanger
+includet("../src/temporal_superposition.jl")
 
 # Define paremeters
+includet("../src/Utils.jl")
+t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
 t = range(60.0, 3600.0*24*6, step=60) # Time (linear)
-H = 150.0                       # Borehole depth
-D = 2.0                         # Borehole buried depth
-s = 0.05                        # Shank spacing (s/2 is the half-shank spacing)
-r = (b = 0.08,                  # Borehole radius
-    o = 0.022,                  # Pipe outlet radius
-    i = 0.017)                  # Pipe inlet radius
-k = (s = 3.0,                   # Ground thermal conductivity
-    g = 1.6,                    # Grout thermal conductivity
-    p = 0.4,                    # Pipe thermal conductivity
-    f = 0.6)                    # Fluid thermal conductivity
-C = (s = 2.11e6,                # Ground volumetric specific heat
-    g = 2.25e6,                 # Grout volumetric specific heat
-    p = 1.9e6,                  # Pipe volumetric specific heat
-    f = 4.2e6)                  # Fluid volumetric specific heat
-ρ = (s = 1000.0,                # Groud density
-    g = 1000.0,                 # Grout density
-    p = 1000.0,                 # Pipe density
-    f = 1000.0)                 # Fluid density
 
 # Define operating conditions
 Q = 10000.0 * ones(60*24*6)     # Constant heating power signal for every minutes in 6 days
@@ -48,7 +31,7 @@ state_vec = state_vector(ind, state, length(t))
 # Create transfer functions
 g_fls = Matrix{Float64}(undef, length(t), length(unique(state)))
 for (i, j) in enumerate(ind_unique)
-    g_fls[:, i] = fls(t, V1[j], C.s, r.b, V2[j], D)
+    g_fls[:, i] = fls(t, V1[j], Cs, rb, V2[j], D)
 end
 
 # Non-stationary convolution
