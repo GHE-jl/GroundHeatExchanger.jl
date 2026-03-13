@@ -1,7 +1,7 @@
-name = "GHEModels"
+name = "GroundHeatExchanger"
 uuid = "bd8f68b8-2a15-4d14-8bb6-4cefce65f0ac"
-version = "1.0.0-DEV"
 authors = ["Gabriel-Dion <dion.gabriel100@gmail.com>"]
+version = "1.0.0-DEV"
 
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"

@@ -70,7 +70,7 @@ function resistance_borehole_multipole(V::Real, s::Real, rb::Real, ro::Real, ri:
     kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0, order::Int=1)
     # Compute fluid and pipe resistances
     Rf = resistance_fluid(V / (π * ri^2), ri, kf, cf, ρf, μf, ϵ)
-    Rp = resistance_pipe(ro, ri, kp, 2)
+    Rp = resistance_pipe(ro, ri, kp)
 
     # Compute Rb with the first-order multipole method
     return resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, order)
@@ -141,7 +141,7 @@ function resistance_total_internal_multipole(V::Real, s::Real, rb::Real, ro::Rea
     ks::Real, kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0, order::Int=1)
     # Compute fluid and pipe resistances
     Rf = resistance_fluid(V / (π * ri^2), ri, kf, cf, ρf, μf, ϵ)
-    Rp = resistance_pipe(ro, ri, kp, 2)
+    Rp = resistance_pipe(ro, ri, kp)
 
     # Compute Ra with the first-order multipole method
     return resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, order)
@@ -214,7 +214,7 @@ function resistance_borehole_effective(V::Real, H::Real, s::Real, rb::Real, ro::
     ks::Real, kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0)    
     # Compute fluid and pipe resistances
     Rf = resistance_fluid(V / (π * ri^2), ri, kf, cf, ρf, μf, ϵ)
-    Rp = resistance_pipe(ro, ri, kp, 2)
+    Rp = resistance_pipe(ro, ri, kp)
 
     # Compute Rb and Ra with the first-order multipole method
     Rb = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, 1)

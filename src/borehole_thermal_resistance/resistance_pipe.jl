@@ -1,5 +1,5 @@
 """
-    R_p(ro, ri, kp, np)
+    R_p(ro, ri, kp)
 
 Function that computes the pipe thermal resistance (radial conduction resistance around a
 cylinder pipe). Valid for 1 pipe.
@@ -7,9 +7,6 @@ cylinder pipe). Valid for 1 pipe.
     - `ro`: Outer radius of the pipe [m]
     - `ri`: Inner radius of the pipe [m]
     - `kp`: Pipe thermal conductivity [W/mK]
-    - `np`: Number of pipe [-]
-        - U-loop configuration: even value (2, 4, 6)
-        - Coaxial configuration: 1
 # Output
     - `Rp`: Pipe conductive thermal resistance [mK/W]
 # Reference
@@ -18,6 +15,6 @@ cylinder pipe). Valid for 1 pipe.
     - Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. 
         Springer Nature Switzerland.
 """
-function resistance_pipe(ro::Real, ri::Real, kp::Real, np::Int)
-    return log(ro / ri) / (2 * π * kp * np)
+function resistance_pipe(ro::Real, ri::Real, kp::Real)
+    return log(ro / ri) / (2 * π * kp)
 end
