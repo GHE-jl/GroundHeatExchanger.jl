@@ -73,6 +73,7 @@ pkg> add https://github.com/gabriel-dion/GroundHeatExchanger.jl
 - Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental validation of non-stationary convolutions for the fast simulation of time-variant flowrates in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219. https://doi.org/10.1080/23744731.2023.2279468
 - Dusseault, B., Pasquier, P., & Marcotte, D. (2018). A block matrix formulation for efficient g-function construction. Renewable Energy, 121, 249–260. https://doi.org/10.1016/j.renene.2017.12.092
 - Nguyen, A., & Pasquier, P. (2021). A successive flux estimation method for rapid g-function construction of small to large-scale ground heat exchanger. Renewable Energy, 165, 359–368. https://doi.org/10.1016/j.renene.2020.10.074
+- Claesson, J., & Javed, S. (2019). Explicit multipole formulas and thermal network models for calculating thermal resistances of double U-pipe borehole heat exchangers. Science and Technology for the Built Environment, 25(8), 980–992. https://doi.org/10.1080/23744731.2019.1620565
 
 ## License
 

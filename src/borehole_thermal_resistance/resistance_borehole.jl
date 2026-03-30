@@ -2,8 +2,9 @@ includet("resistance_fluid.jl")
 includet("resistance_pipe.jl")
 
 """
-    resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, order=1)
-    resistance_borehole_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ=0.0, order=1)
+    resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop=1, order=1)
+    resistance_borehole_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ=0.0,
+        nLoop=1, order=1)
 
 Function that computes the thermal borehole resistance of a ground heat exchanger based on the
 zeroth- or first-order multipole formula for a single U-loop of Hellström (1991) for grout thermal 
@@ -26,6 +27,7 @@ Note: To obtain only the grout thermal resistance, set `Rp` and `Rf` as 0.0.
     - `Rp`: Pipe thermal resistance [mK/W]
     - `Rf`: Fluid thermal resistance [mK/W]
     - `order`: Order of the multipole method (default 1)
+    - `nLoop`: Number of loops in the ground heat exchanger (2 pipes per loop) (default 1)
 # Output
     - `Rb`: Borehole thermal resistance [mK/W]
 # Reference
@@ -34,52 +36,76 @@ Note: To obtain only the grout thermal resistance, set `Rp` and `Rf` as 0.0.
         https://doi.org/10.1016/j.apenergy.2016.11.079
     - Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
         http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
+    - Claesson, J., & Javed, S. (2019). Explicit multipole formulas and thermal network models for
+        calculating thermal resistances of double U-pipe borehole heat exchangers. Science and
+        Technology for the Built Environment, 25(8), 980–992.
+        https://doi.org/10.1080/23744731.2019.1620565
 """
 function resistance_borehole_multipole(s::Real, rb::Real, ro::Real, ks::Real, kg::Real, 
-    Rp::Real, Rf::Real, order::Int=1)
-    # Compute β
-    Rₚ = Rp + Rf            # Pipe and fluid resistance
-    β = 2 * π * kg * Rₚ
+    Rp::Real, Rf::Real, nLoop::Int=1, order::Int=1)
+    # Initial parameters
+    Rₚ = Rp + Rf                                    # Pipe and fluid resistance
+    β = 2 * π * kg * Rₚ                             # β parameter for the multipole method
+    σ = (kg - ks) / (kg + ks)                       # σ parameter for the multipole method
 
-    # Compute σ
-    σ = (kg - ks) / (kg + ks)
+    if nLoop == 1                                   # Single U-loop
+        # Compute θ₁ to θ₃
+        θ₁ = s / (2 * rb)   # equal to D/rb
+        θ₂ = rb / ro
+            
+        if order == 0                               # Zeroth-order multipole method (line-source)
+            # Compute Rb with Eq. 12 from Javed and Spitler 2017
+            Rb = (1 / (4 * π * kg)) * (β + log(θ₂ / (2 * θ₁ * (1 - θ₁^4)^σ)))
+        elseif order == 1                           # First-order multipole method
+            θ₃ = ro / s
+            b₁ = (1 + β) / (1 - β)
+            # Compute Rb with Eq. 13 from Javed and Spitler 2017
+            tmp = (1 - θ₁^4)
+            a = log(θ₂ / (2 * θ₁ * tmp^σ))
+            b = θ₃^2 * (1 - (4 * σ * θ₁^4 / tmp))^2
+            c = b₁ + (θ₃^2 * (1 + (16 * σ * θ₁^4 / (tmp^2))))
+            Rb = (1 / (4 * π * kg)) * (β + a - (b / c))
+        else
+            error("Only order 0 and 1 are implemented for the multipole method.")
+        end
+    elseif nLoop == 2                               # Double U-loop
+        if order == 0                               # Zeroth-order multipole method (line-source)
+            Rb = Rₚ / 4 + (1 / (4 * π * kg)) * (log(rb^4 / (4 * ro * (s / 2)^3)) + σ * log(rb^8 / 
+                (rb^8 - (s / 2)^8)))
+        elseif order == 1                           # First-order multipole method
+            θ₁ = ro^2 / (4 * (s / 2)^2)
+            θ₂ = (s / 2)^2 / (rb^8 - (s / 2)^8)^(1/4)
+            θ₃ = rb^2 / (rb^8 - (s / 2)^8)^(1/4)
+            b₁ = (1 - β) / (1 + β)
 
-    # Compute θ₁ to θ₃
-    θ₁ = s / (2 * rb)   # equal to D/rb
-    θ₂ = rb / ro
-    if order == 1
-        θ₃ = ro / s
-    end
-
-    if order == 0
-        # Compute Rb with Eq. 12 from Javed and Spitler 2017
-        Rb = (1 / (4 * π * kg)) * (β + log(θ₂ / (2 * θ₁ * (1 - θ₁^4)^σ)))
-    elseif order == 1
-        # Compute Rb with Eq. 13 from Javed and Spitler 2017
-        tmp = (1 - θ₁^4)
-        a = log(θ₂ / (2 * θ₁ * tmp^σ))
-        b = θ₃^2 * (1 - (4 * σ * θ₁^4 / tmp))^2
-        c = ((1 + β) / (1 - β)) + (θ₃^2 * (1 + (16 * σ * θ₁^4 / (tmp^2))))
-        Rb = (1 / (4 * π * kg)) * (β + a - (b / c))
+            Rb = Rₚ / 4 + (1 / (4 * π * kg)) * (log(rb^4 / (4 * ro * (s / 2)^3)) + σ * log(rb^8 / 
+                (rb^8 - (s / 2)^8))) - ((b₁ * θ₁ * (3 - 8 * σ * θ₂^4)^2) / ((8 * π * kg) * 
+                (1 + b₁ * θ₁ * (5 + 64 * σ * θ₂^4 * θ₃^4))))
+        else
+            error("Only order 0 and 1 are implemented for the multipole method.")
+        end
     else
-        error("Only order 0 and 1 are implemented for the multipole method.")
+        error("Only single and double U-loops are implemented for the multipole method.")
     end
+
     return Rb
 end
 function resistance_borehole_multipole(V::Real, s::Real, rb::Real, ro::Real, ri::Real, ks::Real,
-    kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0, order::Int=1)
+    kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0,
+    nLoop::Int=1, order::Int=1)
     # Compute fluid and pipe resistances
     Rf = resistance_fluid(V / (π * ri^2), ri, kf, cf, ρf, μf, ϵ)
     Rp = resistance_pipe(ro, ri, kp)
 
     # Compute Rb with the first-order multipole method
-    return resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, order)
+    return resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop, order)
 end
 
 """
-    resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, order=1)
+    resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop=1, order=1,
+        network="diagonal")
     resistance_total_internal_multipole(V, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, ϵ=0.0,
-        order=1)
+        nLoop=1, order=1; network="diagonal")
 
 Computes the zeroth- or first-order multipole method for the total internal resistance (Eq. 25 or 26
 of Javed and Spitler 2017) by Hellström 1991 for a single U-tube ground heat exchanger. This is used
@@ -101,7 +127,9 @@ or Rbₑ).
     - `ϵ`: Pipe roughness [m] (default 0.0)
     - `Rp`: Pipe thermal resistance [mK/W]
     - `Rf`: Fluid thermal resistance [mK/W]
+    - `nLoop`: Number of loops in the ground heat exchanger (2 pipes per loop) (default 1)
     - `order`: Order of the multipole method (default 1)
+    - `network`: `diagonal` and `adjacent` network for double U-loop (default `diagonal`)
 # Output
     - `Ra`: Total internal thermal resistance [mK/W]
 # Reference
@@ -110,47 +138,96 @@ or Rbₑ).
         https://doi.org/10.1016/j.apenergy.2016.11.079
     - Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.”
         http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
+    - Claesson, J., & Javed, S. (2019). Explicit multipole formulas and thermal network models for
+        calculating thermal resistances of double U-pipe borehole heat exchangers. Science and
+        Technology for the Built Environment, 25(8), 980–992.
+        https://doi.org/10.1080/23744731.2019.1620565
 """
 function resistance_total_internal_multipole(s::Real, rb::Real, ro::Real, ks::Real, kg::Real,
-    Rp::Real, Rf::Real, order::Int=1)
-    # Compute β
-    Rₚ = Rf + Rp            # Pipe and fluid resistance
-    β = 2 * π * kg * Rₚ
+    Rp::Real, Rf::Real, nLoop::Int=1, order::Int=1, network::String="diagonal")
+    # Initial parameters
+    Rₚ = Rp + Rf                                    # Pipe and fluid resistance
+    β = 2 * π * kg * Rₚ                             # β parameter for the multipole method
+    σ = (kg - ks) / (kg + ks)                       # σ parameter for the multipole method
 
-    # Compute σ
-    σ = (kg - ks) / (kg + ks)
+    if nLoop == 1                                   # Single U-loop
+        # Compute θ₁ and θ₃
+        θ₁ = s / (2 * rb)
+        θ₃ = ro / s
 
-    # Compute θ₁ and θ₃
-    θ₁ = s / (2 * rb)
-    θ₃ = ro / s
+        # Compute Rₐ with Eq. 26 from Javed and Spitler 2017
+        if order == 0
+            Ra = (1 / (π * kg)) * (β + log((1 + θ₁^2)^σ / (θ₃ * (1 - θ₁^2)^σ)))
+        elseif order == 1
+            Ra = (1 / (π * kg)) * (β + log((1 + θ₁^2)^σ / (θ₃ * (1 - θ₁^2)^σ)) -
+                ((θ₃^2 * (1 - (θ₁^4) + (4 * σ * θ₁^2))^2) /
+                (((1 + β) / (1 - β)) * (1 - θ₁^4)^2 - (θ₃^2 * (1 - θ₁^4)^2) +
+                (8 * σ * θ₁^2 * θ₃^2 * (1 + θ₁^4)))))
+        else
+            error("Only order 0 and 1 are implemented for the multipole method.")
+        end
+    elseif nLoop == 2                               # Double U-loop
+        if network == "diagonal"
+            if order == 0                           # Zeroth-order multipole method (line-source)
+                Ra = 2 * Rₚ + (2 / (2 * π * kg)) * (log(s / (2 * ro)) + σ * log((rb^4 + (s / 2)^4) / 
+                    (rb^4 - (s / 2)^4)))
+            elseif order == 1                       # First-order multipole method
+                θ₁ = ro^2 / (4 * (s / 2)^2)
+                θ₂ = (s / 2)^2 / (rb^8 - (s / 2)^8)^(1/4)
+                θ₃ = rb^2 / (rb^8 - (s / 2)^8)^(1/4)
+                b₁ = (1 - β) / (1 + β)
 
-    # Compute Rₐ with Eq. 26 from Javed and Spitler 2017
-    if order == 0
-        Ra = (1 / (π * kg)) * (β + log((1 + θ₁^2)^σ / (θ₃ * (1 - θ₁^2)^σ)))
-    elseif order == 1
-        Ra = (1 / (π * kg)) * (β + log((1 + θ₁^2)^σ / (θ₃ * (1 - θ₁^2)^σ)) -
-            ((θ₃^2 * (1 - (θ₁^4) + (4 * σ * θ₁^2))^2) /
-            (((1 + β) / (1 - β)) * (1 - θ₁^4)^2 - (θ₃^2 * (1 - θ₁^4)^2) +
-            (8 * σ * θ₁^2 * θ₃^2 * (1 + θ₁^4)))))
+                Ra = 2 * Rₚ + (2 / (2 * π * kg)) * (log(s / (2 * ro)) + σ * log((rb^4 + (s / 2)^4) /
+                    (rb^4 - (s / 2)^4))) - ((2 * b₁ * θ₁ * (1 + 8 * σ * θ₂^2 * θ₃^2)^2) / 
+                    ((2 * π * kg) * (1 - b₁ * θ₁ * (3 - 32 * σ * (θ₂^2 * θ₃^6 + θ₂^6 * θ₃^2)))))
+            else
+                error("Only order 0 and 1 are implemented for the multipole method.")
+            end
+        elseif network == "adjacent"
+            if order == 0                           # Zeroth-order multipole method (line-source)
+                Ra = 2 * Rₚ + (2 / (2 * π * kg)) * (log(s / ro) + σ * log((rb^2 + (s / 2)^2) /
+                    (rb^2 - (s / 2)^2)))
+            elseif order == 1                       # First-order multipole method
+                θ₁ = ro^2 / (4 * (s / 2)^2)
+                θ₂ = (s / 2)^2 / (rb^8 - (s / 2)^8)^(1/4)
+                θ₃ = rb^2 / (rb^8 - (s / 2)^8)^(1/4)
+                b₁ = (1 - β) / (1 + β)
+                V1 = 1 - 8 * σ * θ₂^3 * θ₃
+                V2 = 3 + 8 * σ * θ₂ * θ₃^3
+                M11 = 1 + 16 * b₁ * σ * θ₁ * (3 * θ₂^3 * θ₃^5 + θ₂^7 * θ₃)
+                M21 = b₁ * θ₁
+                M12 = -M21
+                M22 = -1 - 16 * b₁ * σ * θ₁ * (3 * θ₂^5 * θ₃^3 + θ₂ * θ₃^7)
+
+                Ra = 2 * Rₚ + (2 / (2 * π * kg)) * (log(s / ro) + σ * log((rb^2 + (s / 2)^2) /
+                    (rb^2 - (s / 2)^2))) + ((b₁ * θ₁ * V2^2 * M11 - 2 * V1 * V2 * M21 - V1^2 * M22)
+                    / (M11 * M22 + M21^2))
+            else
+                error("Only order 0 and 1 are implemented for the multipole method.")
+            end
+        else
+            error("Only `diagonal` and `adjacent` networks exist in double U-loop configuration.")
+        end
     else
-        error("Only order 0 and 1 are implemented for the multipole method.")
+        error("Only single and double U-loops are implemented for the multipole method.")
     end
     return Ra
 end
 function resistance_total_internal_multipole(V::Real, s::Real, rb::Real, ro::Real, ri::Real, 
-    ks::Real, kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0, order::Int=1)
+    ks::Real, kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0,
+    nLoop::Int=1, order::Int=1; network::String="diagonal")
     # Compute fluid and pipe resistances
     Rf = resistance_fluid(V / (π * ri^2), ri, kf, cf, ρf, μf, ϵ)
     Rp = resistance_pipe(ro, ri, kp)
 
     # Compute Ra with the first-order multipole method
-    return resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, order)
+    return resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop, order, network)
 end
 
 """
     resistance_borehole_effective(V, H, cf, ρf, Rb, Ra)
-    resistance_borehole_effective(V, H, s, rb, ro, ks, kg, cf, ρf, Rp, Rf)
-    resistance_borehole_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
+    resistance_borehole_effective(V, H, s, rb, ro, ks, kg, cf, ρf, Rp, Rf, nLoop=1)
+    resistance_borehole_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf, nLoop=1)
 
 Function that computes the effective thermal borehole resistance (also named Rb*). Effective Rb
 allows considering the thermal short-circuiting along the borehole. Two types of boundary 
@@ -174,6 +251,7 @@ Note: This application is valid for single U-loop (n = 2).
     - `Rb`: Borehole thermal resistance [mK/W]
     - `Ra`: Total internal thermal resistance [mK/W]
     - `ϵ`: Pipe roughness [m] (default 0.0)
+    - `nLoop`: Number of loops in the ground heat exchanger (2 pipes per loop) (default 1)
 # Outputs
     - `Rbₑ`: Effective borehole thermal resistance [mK/W]
 # Reference
@@ -202,23 +280,24 @@ function resistance_borehole_effective(V::Real, H::Real, cf::Real, ρf::Real, Rb
     return 0.5 * (Rbₑ1 + Rbₑ2)
 end
 function resistance_borehole_effective(V::Real, H::Real, s::Real, rb::Real, ro::Real, ks::Real,
-    kg::Real, cf::Real, ρf::Real, Rp::Real, Rf::Real)
+    kg::Real, cf::Real, ρf::Real, Rp::Real, Rf::Real, nLoop::Int=1)
     # Compute Rb and Ra with the first-order multipole methods
-    Rb = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, 1)
-    Ra = resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, 1)
+        Rb = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop, 1)
+        Ra = resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop, 1)
 
     # Compute Rbₑ
     return resistance_borehole_effective(V, H, cf, ρf, Rb, Ra)
 end
 function resistance_borehole_effective(V::Real, H::Real, s::Real, rb::Real, ro::Real, ri::Real,
-    ks::Real, kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0)    
+    ks::Real, kg::Real, kp::Real, kf::Real, cf::Real, ρf::Real, μf::Real, ϵ::Real=0.0,
+    nLoop::Int=1)    
     # Compute fluid and pipe resistances
     Rf = resistance_fluid(V / (π * ri^2), ri, kf, cf, ρf, μf, ϵ)
     Rp = resistance_pipe(ro, ri, kp)
 
     # Compute Rb and Ra with the first-order multipole method
-    Rb = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, 1)
-    Ra = resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, 1)
+    Rb = resistance_borehole_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop, 1)
+    Ra = resistance_total_internal_multipole(s, rb, ro, ks, kg, Rp, Rf, nLoop, 1)
 
     # Compute Rbₑ
     return resistance_borehole_effective(V, H, cf, ρf, Rb, Ra)

@@ -12,8 +12,6 @@ includet("ground_models/finite_line_source.jl")
 includet("ground_models/moving_infinite_line_source.jl")
 # Moving finite line source of Guo et al. (2021)
 includet("ground_models/moving_finite_line_source.jl")
-# Standing column well model of Jacques et al. (2025)
-includet("ground_models/beta_infinite_line_source.jl")
 
 # Temporal superposition
 includet("temporal_superposition.jl")
@@ -31,9 +29,6 @@ includet("utils.jl")
 
 # Ground model export for closed-loop GHEs
 export ils, ics, fls, mils, mfls
-
-# Ground model export for standing column wells (probably to be moved to a separate module)
-export βils_outlet, βils, Rb_SCW, convergence_flow
 
 # Temporal superposition export
 export convolution, convolutionf, impulse_func, 

@@ -1,5 +1,5 @@
 """
-    R_p(ro, ri, kp)
+    resistance_pipe(ro, ri, kp)
 
 Function that computes the pipe thermal resistance (radial conduction resistance around a
 cylinder pipe). Valid for 1 pipe.
