@@ -86,6 +86,7 @@ groundwater flow is considered to be on the positive x-axis.
 """
 function mfls(t::Real, H::Real, rb::Real, D::Real, xy::AbstractMatrix{<:Real}, ks::Real, Cs::Real,
     Cf::Real, vD::Real)
+    # Method for 1 time step and 1 radius
     T = float(promote_type(typeof(t), typeof(H), typeof(rb), typeof(D), eltype(xy), typeof(ks),
         typeof(Cs), typeof(Cf), typeof(vD)))
     return _mfls(T(t), T(H), T(rb), T(D), T(xy[1]), T(xy[2]), T(ks), T(Cs), T(Cf), T(vD))
@@ -93,6 +94,7 @@ end
 
 function mfls(t::AbstractVector{<:Real}, H::Real, rb::Real, D::Real, xy::AbstractMatrix{<:Real},
     ks::Real, Cs::Real, Cf::Real, vD::Real)
+    # Method for multiple time steps and 1 xy coordinate.
     # Check type
     T = float(promote_type(eltype(t), typeof(H), typeof(rb), typeof(D), eltype(xy), typeof(ks),
         typeof(Cs), typeof(Cf), typeof(vD)))
@@ -102,6 +104,35 @@ function mfls(t::AbstractVector{<:Real}, H::Real, rb::Real, D::Real, xy::Abstrac
     g = similar(t_T)
     @inbounds @simd for i in eachindex(t_T)
         g[i] = _mfls(t_T[i], T(H), T(rb), T(D), T(xy[1]), T(xy[2]), T(ks), T(Cs), T(Cf), T(vD))
+    end
+    return g
+end
+function mfls(t::Real, H::Real, rb::Real, D::Real, xy::AbstractMatrix{<:Real}, ks::Real, Cs::Real,
+    Cf::Real, vD::Real)
+    # Method for 1 time step and multiple xy coordinates. xy is a 2×n matrix where each column
+    # is an [x, y] coordinate pair.
+    T = float(promote_type(typeof(t), typeof(H), typeof(rb), typeof(D), eltype(xy), typeof(ks),
+        typeof(Cs), typeof(Cf), typeof(vD)))
+    n_coords = size(xy, 2)
+    g = Vector{T}(undef, n_coords)
+    @inbounds for i in 1:n_coords
+        g[i] = _mfls(T(t), T(H), T(rb), T(D), T(xy[1, i]), T(xy[2, i]), T(ks), T(Cs), T(Cf), T(vD))
+    end
+    return g
+end
+function mfls(t::AbstractVector{<:Real}, H::Real, rb::Real, D::Real, xy::AbstractMatrix{<:Real},
+    ks::Real, Cs::Real, Cf::Real, vD::Real)
+    # Method for multiple time steps and multiple xy coordinates. xy is a 2×n matrix where each
+    # column is an [x, y] coordinate pair.
+    T = float(promote_type(eltype(t), typeof(H), typeof(rb), typeof(D), eltype(xy), typeof(ks),
+        typeof(Cs), typeof(Cf), typeof(vD)))
+    t_T  = convert(Vector{T}, t)
+    n_coords = size(xy, 2)
+    g = Matrix{T}(undef, length(t_T), n_coords)
+    @inbounds for i in 1:n_coords
+        for j in eachindex(t_T)
+            g[j, i] = _mfls(t_T[j], T(H), T(rb), T(D), T(xy[1, i]), T(xy[2, i]), T(ks), T(Cs), T(Cf), T(vD))
+        end
     end
     return g
 end

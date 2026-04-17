@@ -24,6 +24,9 @@ includet("borehole_thermal_resistance/resistance_fluid.jl")
 includet("borehole_thermal_resistance/resistance_pipe.jl")
 includet("borehole_thermal_resistance/resistance_borehole.jl")
 
+# Include temperature simulations
+includet("temperature_simulation.jl")
+
 # Include other varied functions
 includet("utils.jl")
 
@@ -43,14 +46,17 @@ export Reynold, Prandtl, Nusselt, friction_factor_Colebrook_White, resistance_fl
     resistance_borehole_multipole, resistance_total_internal_multipole,
     resistance_borehole_effective
 
+# Temperature simulation export
+export fluid_temperature, outlet_temperature, inlet_temperature
+
 # Utils export
 export pchip_interpolation, set_nodes, borefield_xy, borefield_radius,
     water_ρ, water_cp, water_k, water_μ,
     head_loss_Darcy_Weisbach,
-    GHE
+    GHE, heat_load_profile
 
 # Temperature simulations
-export g_model, T_f
+export g_model
 
 """
     g_model(t, ks, Cs, rb, H, D, xy)
@@ -95,24 +101,4 @@ function g_model(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb:
         return gₛ
     end
 end
-
-"""
-    T_f(g, Q, Rbₑ, T₀)
-
-Function that computes the average temperature between the inlet and outlet pipes using a borehole 
-wall g-functions.
-# Arguments
-    - g: g-function for the borefield (nt x 1) [°Cm/W]
-    - q: Ground loads (nt x 1) [W/m]
-    - Rbₑ: Effective borehole thermal resistance (1 x 1) [mK/W]
-    - T₀: Undisturbed ground temperature (1 x 1) [°C]
-# Output
-    - Tf: Average temperatut between the inlet and outlet pipes (nt x 1) [°C]
-"""
-function T_f(g::Union{Real, AbstractVector{<:Real}}, q::Union{Real, AbstractVector{<:Real}},
-    Rbₑ::Real, T₀::Real)
-    # Mean fluid temperature
-    @. Tf = T₀ + (q * Rbₑ) + convolution(diff([0; q]), g)    
-    return Tf
-end
-end
+end # module GroundHeatExchanger

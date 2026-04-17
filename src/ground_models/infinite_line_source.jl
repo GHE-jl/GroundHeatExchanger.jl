@@ -32,10 +32,12 @@ temperature.
     ils(60:60:3600, 3.0, 2e6, 0.076)
 """
 function ils(t::Real, r::Real, ks::Real, Cs::Real)
+    # Method for 1 time step and 1 radius
     T = float(promote_type(typeof(t), typeof(r), typeof(ks), typeof(Cs)))
     return _ils(T(t), T(r), T(ks), T(Cs))
 end
 function ils(t::AbstractVector{<:Real}, r::Real, ks::Real, Cs::Real)
+    # Method for multiple time steps and 1 radius.
     # Check type
     T = float(promote_type(eltype(t), typeof(r), typeof(ks), typeof(Cs)))
     t_T  = convert(Vector{T}, t)
@@ -46,4 +48,48 @@ function ils(t::AbstractVector{<:Real}, r::Real, ks::Real, Cs::Real)
         g[i] = _ils(t_T[i], T(r), T(ks), T(Cs))
     end
     return g
+end
+function ils(t::Real, r::AbstractVector{<:Real}, ks::Real, Cs::Real)
+    # Method for 1 time step and multiple radius.
+    T = float(promote_type(typeof(t), eltype(r), typeof(ks), typeof(Cs)))
+    g = similar(r)
+    @inbounds @simd for i in eachindex(r)
+        g[i] = _ils(T(t), T(r[i]), T(ks), T(Cs))
+    end
+    return g
+end
+function ils(t::AbstractVector{<:Real}, r::AbstractVector{<:Real}, ks::Real, Cs::Real)
+    # Method for multiple time steps and multiple radius in a 2D array. Columns correspond to
+    # different radius and rows to different time steps.
+    T = float(promote_type(eltype(t), eltype(r), typeof(ks), typeof(Cs)))
+    t_T  = convert(Vector{T}, t)
+    g = Matrix{T}(undef, length(t_T), length(r))
+    @inbounds @simd for i in eachindex(r)
+        for j in eachindex(t_T)
+            g[j, i] = _ils(t_T[j], T(r[i]), T(ks), T(Cs))
+        end
+    end
+    return g
+end
+function ils(t::AbstractVector{<:Real}, r::AbstractArray{<:Real}, ks::Real, Cs::Real)
+    # Method for multiple time steps and multiple radius in a 3D array.
+    # The dimensions of the 3D array are (`t`, `x`, `y`).
+    # Check type
+    T = float(promote_type(eltype(t), eltype(r), typeof(ks), typeof(Cs)))
+    # Convert time vector to the right type
+    t_T  = convert(Vector{T}, t)
+    nt = length(t_T)                # Number of element in the time vector
+    # Find unique radius
+    nb = size(r, 1)                 # Number of boreholes
+    rᵥ = reshape(r, nb * nb)        # Vector of the borefield radius (nb x 1) [m]
+    rᵤ = unique(rᵥ)                 # Unique values of the borefield radius (nbᵤ x 1) [m]
+    rᵢ = indexin(rᵥ, rᵤ)            # Indices of the unique radius values (nb*nb x 1) [m]
+    # Compute a 2D matrix of g-function for unique radius
+    g2D = ils(t_T, rᵤ, T(ks), T(Cs))
+    # Fill a 3D matrix of g-function for all radius
+    g3D = zeros(nt, nb, nb)
+    for i in 1:nt
+        g3D[i, :, :] = reshape(g2D[i, rᵢ], (1, nb, nb)) # Fill a 3D matrix of g-functions
+    end
+    return g3D
 end

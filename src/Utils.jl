@@ -278,3 +278,44 @@ function GHE()
     V = 30/6e4                      # Fluid flow rate in m³/s (30 L/s)
     return t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V
 end
+
+"""
+    heat_load_profile(t, A, B, C, D, E, F, G)
+
+Function that defines a heat load profile for testing the convolution of the g-function with a heat
+load profile. See Eqs. 7 and 8 of Bernier 2004.
+# Arguments
+    - `t`: Time vector or scalar [s]
+    - `A`: Amplitude parameter [W] (default: 10246)
+    - `B`: Phase shift parameter [hours] (default: 2409)
+    - `C`: Harmonic coefficient [hours] (default: 64)
+    - `D`: Period parameter [-] (default: 2)
+    - `E`: Modulation amplitude [-] (default: 0.01)
+    - `F`: Phase offset [hours] (default: 0)
+    - `G`: Phase parameter [-] (default: 0.95)
+# Output
+    - `Q`: Heat load profile [W]
+# Reference
+    - Bernier, M. A., Pinel, P., Labib, R., & Paillot, R. (2004). A Multiple Load Aggregation
+        Algorithm for Annual Hourly Simulations of GCHP Systems. HVAC&R Research, 10(4), 471–487.
+        https://doi.org/10.1080/10789669.2004.10391115
+"""
+function heat_load_profile(t, A=2000, B=2190, C=80, D=2, E=0.01, F=0, G=0.95)
+    # Define the base heat load function that handles both scalars and vectors
+    function f(t)
+        # Initialize harmonics sum
+        harmonics = zeros(size(t))
+        for n in 1:3
+            coeff = 1 / (π * n) * (cos(C * π * n / 84) - 1)
+            harmonics .+= coeff .* sin.(π * n .* (t .- B) / 84)
+        end
+        
+        return A .* sin.(π/12 .* (t .- B)) .* sin.(π / 4380 .* (t .- B)) .* 
+               ((168 - C) / 168 .+ harmonics)
+    end
+    
+    # Compute the heat load profile with modulation
+    Q = f(t) .+ (-1) .^ floor.(D / 8760 .* (t .- B)) .* abs.(f(t)) .+ 
+        E .* (-1) .^ floor.(D / 8760 .* (t .- B)) .* sign.(cos.(D .* π / 4380 .* (t .- F)) .+ G)
+    return Q
+end
