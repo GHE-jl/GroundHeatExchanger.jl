@@ -302,3 +302,5 @@ function resistance_borehole_effective(V::Real, H::Real, s::Real, rb::Real, ro::
     # Compute Rbₑ
     return resistance_borehole_effective(V, H, cf, ρf, Rb, Ra)
 end
+
+#TODO: Implement coaxial borehole heat exchanger configuration

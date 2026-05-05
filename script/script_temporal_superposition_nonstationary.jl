@@ -1,8 +1,8 @@
 """
-Test for the non-stationary convolution from temporal_superposition.jl. This script does not
-correspond to real application of the non-stationary convolution, as it is more for operating
-conditions. Here, the test allows comparison with the Matlab implementation of the non-stationary
-convolution.
+Test for the non-stationary convolution from temporal_superposition.jl.
+This script does not correspond to real application of the non-stationary convolution, as it is more
+for operating conditions. Here, the test allows comparison with the Matlab implementation of the
+non-stationary convolution.
 """
 
 using BenchmarkTools

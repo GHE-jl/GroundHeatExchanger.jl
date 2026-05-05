@@ -1,5 +1,7 @@
 include("temporal_superposition.jl")
 
+#TODO: Validate that this file is complete. Check to put the function g_model here?
+
 """
     fluid_temperature(t, q, g, T0, ks, Rb)
     fluid_temperature(t, Q, g, H, T0, ks, Rb)
@@ -31,8 +33,8 @@ function fluid_temperature(t::AbstractVector{<:Real}, q::AbstractVector{<:Real},
     end    
     return T0 .+ q .* Rb .+ convolution(q, g) / (2 * π * ks)
 end
-function fluid_temperature(t::AbstractVector{<:Real}, Q::AbstractVector{<:Real}, g::AbstractVector{<:Real},
-    H::Real, T0::Real, ks::Real, Rb::Real)
+function fluid_temperature(t::AbstractVector{<:Real}, Q::AbstractVector{<:Real},
+    g::AbstractVector{<:Real}, H::Real, T0::Real, ks::Real, Rb::Real)
     # Ensure that Q and g are vectors of the same length as t
     if length(Q) != length(t) || length(g) != length(t)
         throw(ArgumentError("Length of Q and g must match length of t"))

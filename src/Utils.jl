@@ -6,11 +6,11 @@ using LinearAlgebra
 
 Function that performs the complete interpolation of a vector using the PCHIP interpolation method.
 # Arguments
-    - tᵢ: The id on which to interpolate
-    - vᵢ: The vector to interpolate, sampled at tᵢ
-    - t: The new interpolated vector sample
+    - `tᵢ`: The id on which to interpolate
+    - `vᵢ`: The vector to interpolate, sampled at `tᵢ`
+    - `t`: The new interpolated vector sample
 # Output
-    - v: The new interpolated vector
+    - `v`: The new interpolated vector
 """
 function pchip_interpolation(tᵢ::AbstractVector{<:Real}, vᵢ::AbstractVector{<:Real},
     t::AbstractVector{<:Real})
@@ -24,10 +24,10 @@ end
 
 Function that sets a logarithmic progression of node positions on a transfer function.
 # Arguments
-    - nt: Total number of data in the input vectors [-]
-    - n₀: User defined number of nodes on the transfer function [-]
+    - `nt`: Total number of data in the input vectors [-]
+    - `n₀`: User defined number of nodes on the transfer function [-]
 # Output
-    - id: A vector of length "n₀" of node positions on the transfer function [-]
+    - `id`: A vector of length "n₀" of node positions on the transfer function [-]
 """
 function set_nodes(nt::Real, n₀::Integer)
     # Basic inputs

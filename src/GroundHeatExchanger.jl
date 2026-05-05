@@ -63,7 +63,7 @@ export g_model
 
 Function that allows to generate a transfer function efficiently depending on the model required,
 the number of time steps and arrangement of the borefield. Interpolations are performed if there are
-more than 150 time steps, and more than 50 radius.
+more than 150 time steps, and more than 25 radius. #TODO: To complete
 # Arguments
     - t: Time vector (nt x 1) [s]
     - ks: Soil thermal conductivity (1x1) [W/mK]
@@ -78,6 +78,7 @@ more than 150 time steps, and more than 50 radius.
 function g_model(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb::Real, H::Real,
     D::Real, xy::AbstractArray{<:Real}; model::String="fls")
     # Set nodes if time vector is too long
+    #TODO: Add more ground models and and interpolation choices for radius.
     nt = length(t)
     if nt >= 150
         s = set_nodes(nt, 150)
@@ -87,9 +88,9 @@ function g_model(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb:
 
     # Select if spatial superposition is required or not
     if size(xy, 1) > 1
-        gₛ = bloc_matrix(t[s], ks, Cs, rb, H, D, xy)
+        gₛ = successive_flux(t[s], ks, Cs, rb, H, D, xy)
     else
-        if model == "fls" || "FLS"
+        if model == "fls" || model == "FLS"
             gₛ = fls(t[s], ks, Cs, rb, H, D)
         end
     end

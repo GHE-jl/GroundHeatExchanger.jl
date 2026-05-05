@@ -82,7 +82,7 @@ function successive_flux(t, H, rb, D, ks, Cs, xy)
     r, _, _, _, _, _ = borefield_radius(xy, rb)
 
     # Compute the ground model for all different radius of the borefield
-    g = fls(t, H, r, D, ks, Cs) # TODO: at some point add more models.
+    g = fls(t, H, r, D, ks, Cs) # TODO: Add more models, or choices for the model used
 
     # Call the bloc matrix function
     return successive_flux(g)
@@ -132,7 +132,6 @@ function bloc_matrix(gm::AbstractArray{<:Real})
     Gₕ = [[G; repeat(I(nt), 1, nb)] [repeat(I(nt), nb, 1); zeros(nt, nt)]]
     b = zeros((nb + 1) * nt)
     b[nb*nt+1] = 1
-    g = similar(b)
 
     # Solve the linear system
     sol = Gₕ \ b
