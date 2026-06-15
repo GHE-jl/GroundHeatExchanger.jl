@@ -1,5 +1,4 @@
 # Exemple of use of the gST_ANN function
-
 # TODO : - Gérer le plot quand g_EWT et t_EWT sont des [NaN] (retourne une erreur)
 
 # 1 - Input parameters
