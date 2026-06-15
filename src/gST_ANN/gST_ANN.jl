@@ -10,11 +10,11 @@ using Plots
 struct var_adjustment
     xoffset::Vector{Float64}
     gain::Vector{Float64}
-    ymin::Int8 
+    ymin::Int8
 end
 
 """
-    gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
+    gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, D, dt, tf)
 
 The gST_ANN (the short-term transfer function computed with an Artificial Neural Network), 
 takes as input the 15 variables needed to compute the transfer function using a trained 
@@ -34,7 +34,7 @@ transfer function (g_EWT).
     - `ro`: Outer pipe radius [m]
     - `rb`: Borehole radius [m]
     - `H`: Borehole length [m]
-    - `Vdot`: Fluid flow rate [m^3/s]
+    - `V̇`: Fluid flow rate [m^3/s]
     - `D`: Half shank spacing [m]
     - `dt`: Simulation time step [s]
     - `tf`: Simulation duration [s]
@@ -47,7 +47,7 @@ transfer function (g_EWT).
         https://www.sciencedirect.com/science/article/abs/pii/S1359431118305921 
 """
 
-function gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
+function gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, D, dt, tf)
     #= 
     DESCRIPTION OF INPUT VARIABLES:
 
@@ -65,7 +65,7 @@ function gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
     Outer pipe radius                       ro       0.022            0.022           m
     Borehole radius                         rb       2(ro)+2e-3       0.1             m
     Borehole length                         H        110              200             m
-    Fluid flow rate                         Vdot     3.33e-4          5.0e-4          m^3/s
+    Fluid flow rate                         V̇        3.33e-4          5.0e-4          m^3/s
     Half shank spacing                      D        0.02(rb-2ro)+ro  0.98(rb-2ro)+ro m
     Simulation time step                    dt       15               24*3600         s
     Simulation duration                     tf       15               100*365*24*3600 s
@@ -78,30 +78,30 @@ function gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
     # out_of_range is a boolean value (true if at least one of the parameters is out of 
     # range, and false otherwise), p is an array containing the 8 parameters used to compute
     # the transfer function 
-    p = input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
+    p = input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, D, dt, tf)
 
     # 2.0 - Initialization of variables
 
     # 2.1 - Assembly of time vector
-    t=[min(dt,5*24*3600):dt:tf;]
+    t = [min(dt, 5 * 24 * 3600):dt:tf;]
 
     # 2.2 - Timestamp
 
     # This timestamp follow a geometric progression, and the artificial neural network 
     # has been trained on it to reproduce the transfer function
-    ts = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 180, 195,225, 240, 270, 300, 345, 390,
-            420, 480, 540, 600, 660, 750, 840, 930, 1035, 1170, 1305, 1470, 1620, 1830, 
-            2040, 2280, 2535, 2865, 3180, 3570, 3975, 4470, 4965, 5580, 6210, 6975, 7755,
-            8730, 9690, 10905, 12120, 13635, 15150, 17040, 18930, 21300, 23670, 26625, 
-            29580, 33285, 36975, 41595, 46215, 52005, 57780, 64995, 72225, 81255, 90285, 
-            101565, 112845, 126960, 141060, 158685, 176325, 198360, 220410, 247950, 275505,
-            309945, 344385, 387435, 430485, 484290, 538095, 571455, 604800]
+    ts = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 180, 195, 225, 240, 270, 300, 345, 390,
+        420, 480, 540, 600, 660, 750, 840, 930, 1035, 1170, 1305, 1470, 1620, 1830,
+        2040, 2280, 2535, 2865, 3180, 3570, 3975, 4470, 4965, 5580, 6210, 6975, 7755,
+        8730, 9690, 10905, 12120, 13635, 15150, 17040, 18930, 21300, 23670, 26625,
+        29580, 33285, 36975, 41595, 46215, 52005, 57780, 64995, 72225, 81255, 90285,
+        101565, 112845, 126960, 141060, 158685, 176325, 198360, 220410, 247950, 275505,
+        309945, 344385, 387435, 430485, 484290, 538095, 571455, 604800]
 
     # 3.0 - Construction of the short-term (ST) transfer function 
 
     # gST is calculated with a trained artificial neural network
-    gST = 1 ./(exp.(TRCM_ANN(p))./ts) .-1
-    gST[gST .< 0] .= 0 # all negatives values are equaled to zero 
+    gST = 1 ./ (exp.(TRCM_ANN(p)) ./ ts) .- 1
+    gST[gST.<0] .= 0 # all negatives values are equaled to zero 
 
     # 4.0 - Interpolation of transfer function
 
@@ -110,20 +110,20 @@ function gST_ANN(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
     itp = Interpolator(ts, gST)
 
     # Only including values associated with time smaller than the last element of ts
-    t_included = t[t .<= last(ts)]
+    t_included = t[t.<=last(ts)]
     gST = itp.(t_included)
 
 
     # 5.0 - Assembly of the Entering Water Temperature variables 
-    
-    t_EWT = t[t .<= last(ts)] # timestep
+
+    t_EWT = t[t.<=last(ts)] # timestep
     g_EWT = gST # transfer function
 
     return t_EWT, g_EWT
 end
- 
+
 """
-    input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
+    input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, D, dt, tf)
 
 The input parameter validation function validates if the given parameters are in their 
 specific range, for which the ANN has been trained.  
@@ -139,7 +139,7 @@ specific range, for which the ANN has been trained.
     - `ro`: Outer pipe radius [m]
     - `rb`: Borehole radius [m]
     - `H`: Borehole length [m]
-    - `Vdot`: Fluid flow rate [m^3/s]
+    - `V̇`: Fluid flow rate [m^3/s]
     - `D`: Half shank spacing [m]
     - `dt`: Simulation time step [s]
     - `tf`: Simulation duration [s]
@@ -148,34 +148,34 @@ specific range, for which the ANN has been trained.
         false if all the parameters are inside their respective range)
     -`p`: array containing the 8 parameters used to compute the transfer function
 """
-function input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf)
+function input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, D, dt, tf)
 
     # The 15x2 p_limit matrix contains the respective range of the parameters 
-    p_limit = [0.5 4;
-        1.7e6 2.6e6;
-        0.5 4;
-        1.7e6 2.6e6;
-        0.4 0.4;
-        1.9e6 1.9e6;
-        4.2e6 4.2e6;
-        0.017 0.017;
-        0.022 0.022;
-        2*ro+2e-3 0.1;
-        110 200;
-        20/1000/60 30/1000/60;
-        0.02*(rb-2*ro)+ro 0.98*(rb-2*ro)+ro;
-        15 24*3600;
-        15 100*365*24*3600]
-
-   
+    p_limit = [
+        0.5                 4;
+        1.7e6               2.6e6;
+        0.5                 3;
+        1.7e6               2.6e6;
+        0.4                 0.4;
+        1.9e6               1.9e6;
+        4.2e6               4.2e6;
+        0.017               0.017;
+        0.022               0.022;
+        2*ro+2e-3           0.1;
+        110                 200;
+        3.33e-4             5.0e-4;
+        0.02*(rb-2*ro)+ro   0.98*(rb-2*ro)+ro;
+        15                  24*3600;
+        15                  100*365*24*3600
+        ]
 
     # Arrays containing the parameters, their names, and units
-    params = [ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt, tf] 
-    p_names = ["ks","Cs","kg","Cg","kp","Cp","Cf","ri","ro","rb","H","Vdot","D","dt","tf"]
-    p_units = ["W/mK", "J/Km^3", "W/mK", "J/Km^3", "W/mK", "J/Km^3", "J/Km^3", "m", "m", 
-                "m", "m", "m^3/s", "m", "s", "s" ]
+    params = [ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, D, dt, tf]
+    p_names = ["ks", "Cs", "kg", "Cg", "kp", "Cp", "Cf", "ri", "ro", "rb", "H", "V̇", "D", "dt", "tf"]
+    p_units = ["W/mK", "J/Km^3", "W/mK", "J/Km^3", "W/mK", "J/Km^3", "J/Km^3", "m", "m",
+        "m", "m", "m^3/s", "m", "s", "s"]
 
-    
+
     # Boolean variable is either true (1) if the value of the parameter is out of range
     # or false (0) if the value is in range
     out_of_range = false
@@ -199,9 +199,9 @@ function input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, Vdot, D, dt
         params[4], # Cg
         params[10], # rb
         params[11], # H
-        params[12], # Vdot
+        params[12], # V̇
         params[13] # D
-        ] 
+    ]
 
     return p
 
@@ -215,7 +215,7 @@ simulation, using the weights and biases of a trained artificial neural network,
 the transfer function. It is based on the MATLAB Neural Network Toolbox function 
 genFunction.
 # Arguments
-    - `x1`: array of the 8 paramaters (ks, Cs, kg, Cg, rb, H, Vdot, D)
+    - `x1`: array of the 8 paramaters (ks, Cs, kg, Cg, rb, H, V̇, D)
 # Output
     -`y1`: array of the 85 points corresponding to the transfer function
 # Reference
@@ -553,26 +553,26 @@ function TRCM_ANN(x1)
     y1_step1 = var_adjustment([2.70804796159013; 3.40101433345721; 3.80572393013466; 4.09220758739432; 4.31402735213571; 4.49506726800118; 4.64801173536999; 4.78038711913377; 4.89702672265576; 5.0012247175583; 5.18108760124079; 5.2598166980441; 5.40011672772429; 5.46317422216678; 5.57785749932174; 5.6799689904409; 5.81466091872584; 5.90496999506411; 5.91299410103904; 5.90136918514317; 5.93713970193305; 6.00185671283874; 6.07259579966109; 6.17253541927585; 6.24693086934338; 6.28454407571058; 6.32892014720875; 6.40122644627552; 6.46533540997993; 6.52217634023855; 6.57395443914807; 6.63979338302709; 6.69610669078079; 6.7558457383696; 6.81218615298466; 6.87817680816575; 6.93496883430123; 6.99449612844555; 7.04937362714407; 7.11015691480125; 7.165495675611; 7.2282960899894; 7.28716996251986; 7.35275831491212; 7.4142515602783; 7.48496648522391; 7.54868601937661; 7.61733122414148; 7.68047289226816; 7.75303598557401; 7.82003538823144; 7.89728027298626; 7.9687170575595; 8.05151997629326; 8.1280133883671; 8.21600021389809; 8.29705904260283; 8.37528098016886; 8.44558057217484; 8.52539713836956; 8.59777260196457; 8.67996994106617; 8.75426092361555; 8.83833051118274; 8.91461776331096; 9.00083394128001; 9.07883275763796; 9.16691711978836; 9.24652834682625; 9.33649056442027; 9.41762128204305; 9.50911156269308; 9.59169415988891; 9.68466114447102; 9.76848239873761; 9.86274770996574; 9.94765855051093; 10.0431412300597; 10.1290379401728; 10.2255754614357; 10.3123672705644; 10.4098418759835; 10.4974308484788; 10.5476000457948; 10.5950044026322],
         [893051.666786158; 10926.0836539256; 2130.92479582699; 935.902460805922; 577.90750892385; 421.727188293253; 336.212727069045; 281.506818519554; 242.481386246258; 212.526829997677; 168.502648400354; 151.712141538962; 125.127673667935; 114.516703567467; 97.2551698762228; 83.9860319055914; 69.2436945911575; 32.6921646662702; 15.7157833012873; 7.34168881499957; 5.64287415588726; 5.06236016113332; 4.76595755691672; 4.46936057499406; 4.11341149565279; 3.64396427430208; 3.32262480169594; 3.2358077455067; 3.22989828209431; 3.06362414763581; 2.93099689558811; 2.77189701170708; 2.63224217372695; 2.51515519808476; 2.41784224048568; 2.3151828519465; 2.23374189927214; 2.14205450490623; 2.0630986372366; 1.98491110384063; 1.92164096237847; 1.85814320288958; 1.8057507387027; 1.75458760837202; 1.71267801494849; 1.67080736690342; 1.63492709980833; 1.58990915757162; 1.55359005596387; 1.51726357092442; 1.48830892192627; 1.45974027981602; 1.43734556948746; 1.41557166360694; 1.39889729415926; 1.3831905027464; 1.37151057199027; 1.3469217249219; 1.32616361965061; 1.3044580561201; 1.28632177268181; 1.26732791891482; 1.2514854703288; 1.23492136088559; 1.22102128138992; 1.20552528818622; 1.19235976873088; 1.17854365616961; 1.16692234354222; 1.15467947316621; 1.14436870403265; 1.13348855900229; 1.12428253445193; 1.11454865268565; 1.10629008775802; 1.09753371648762; 1.0900844973206; 1.08215825695838; 1.0754003618795; 1.06819026794773; 1.06178137102504; 1.05490825148375; 1.04902179738749; 1.04576275786455; 1.0427576820731],
         -1)
-    
+
     # ===== SIMULATION ========
 
     # Dimensions
     # Q = 1
 
     # Input 1 
-    xp1 = step1(x1,x1_step1)
+    xp1 = step1(x1, x1_step1)
 
     # Layer 1
-    a1 = tanh.(b1 + IW1_1*xp1);
+    a1 = tanh.(b1 + IW1_1 * xp1)
 
     # Layer 2
-    a2 = tanh.(b2 + LW2_1*a1);
+    a2 = tanh.(b2 + LW2_1 * a1)
 
     # Layer 3
-    a3 = b3 + LW3_2*a2;
+    a3 = b3 + LW3_2 * a2
 
     # Output 1
-    y1 = step2(a3,y1_step1);
+    y1 = step2(a3, y1_step1)
 
     return y1
 end
@@ -584,19 +584,19 @@ This function is used to perform the simulation of the artificial neural network
 step1 function is equivalent to the mapminmax_apply function in MATLAB and performs element-
 wise operations (minus, times, plus). It is the first step of the ANN's simulation.
 # Arguments
-    -`x`: array of the 8 paramaters (ks, Cs, kg, Cg, rb, H, Vdot, D)
+    -`x`: array of the 8 paramaters (ks, Cs, kg, Cg, rb, H, V̇, D)
     -`constants`: struct containing the constants needed to performs the simulation 
         (xoffset, gain, ymin) 
 # Output
     -`y`: array containing the 8 transformed paramaters
 """
 # ===== MODULE FUNCTIONS ========
-function step1(x,constants)
+function step1(x, constants)
     y = x .- constants.xoffset
-    y.*= constants.gain
-    y.+= constants.ymin
+    y .*= constants.gain
+    y .+= constants.ymin
     return y
-    
+
 end
 
 """
@@ -614,12 +614,12 @@ simulation.
     -`x`: array of the 85 points corresponding to the transfer function
 """
 # equivalent to mapminmax_reverse function in matlab
-function step2(y,constants)
-    x=y .- constants.ymin
-    x./= constants.gain
-    x.+= constants.xoffset
+function step2(y, constants)
+    x = y .- constants.ymin
+    x ./= constants.gain
+    x .+= constants.xoffset
     return x
-    
+
 end
 
 
