@@ -88,10 +88,10 @@ function g_model(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb:
 
     # Select if spatial superposition is required or not
     if size(xy, 1) > 1
-        gₛ = successive_flux(t[s], ks, Cs, rb, H, D, xy)
+        gₛ = successive_flux(t[s], H, rb, D, ks, Cs, xy)
     else
         if model == "fls" || model == "FLS"
-            gₛ = fls(t[s], ks, Cs, rb, H, D)
+            gₛ = fls(t[s], H, rb, D, ks, Cs)
         end
     end
 

@@ -33,6 +33,7 @@ function successive_flux(g::AbstractArray{<:Real,3})
     # Basic parameters
     nt, nb1, nb2 = size(g)
     @assert nb1 == nb2 "g must be nt × nb × nb"
+    @assert all(isfinite, g) "g must contain only finite values"
     nb = nb1
 
     # First estimation of g-function using block matrix (Eq. 20)
@@ -46,7 +47,17 @@ function successive_flux(g::AbstractArray{<:Real,3})
 
     x = zeros(eltype(g), nt, nb)
     for it in 1:nt
-        sol = GG[it, :, :] \ b
+        M = Matrix(@view GG[it, :, :])
+        sol = try
+            M \ b
+        catch err
+            if err isa SingularException
+                @warn "Singular initial flux system at time index $it; using an SVD-based minimum-norm solve instead. This usually indicates a rank-deficient g slice caused by a degenerate geometry, duplicate boreholes, or a time step too close to zero."
+                svd(M) \ b
+            else
+                rethrow()
+            end
+        end
         x[it, :] .= sol[1:nb]
     end
 
@@ -78,6 +89,8 @@ function successive_flux(g::AbstractArray{<:Real,3})
     return gi
 end
 function successive_flux(t, H, rb, D, ks, Cs, xy)
+    @assert all(>(0), t) "t must be strictly positive to avoid a singular zero-time response"
+
     # Compute the radius matrix of the borefield
     r, _, _, _, _, _ = borefield_radius(xy, rb)
 
