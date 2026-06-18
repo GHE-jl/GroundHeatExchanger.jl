@@ -1,105 +1,26 @@
 module GroundHeatExchanger
 
-using Revise
-
-# Infinite line source of Ingersol (1948)
-includet("ground_models/infinite_line_source.jl")
-# Infinite cylindrical source of Ingersol (1959)
-includet("ground_models/infinite_cylindrical_source.jl")
-# Finite line source of Claesson and Javed (2011)
-includet("ground_models/finite_line_source.jl")
-# Moving finite line source of Pasquier et Lamarche (2022)
-includet("ground_models/moving_infinite_line_source.jl")
-# Moving finite line source of Guo et al. (2021)
-includet("ground_models/moving_finite_line_source.jl")
+using DSP
+using PCHIPInterpolation
+using LinearAlgebra
 
 # Temporal superposition
-includet("temporal_superposition.jl")
-
-# Spatial superpositions techniques
-includet("spatial_superposition.jl")
-
-# Include thermal resistance evaluation
-includet("borehole_thermal_resistance/resistance_fluid.jl")
-includet("borehole_thermal_resistance/resistance_pipe.jl")
-includet("borehole_thermal_resistance/resistance_borehole.jl")
-
-# Include temperature simulations
-includet("temperature_simulation.jl")
-
-# Include other varied functions
-includet("utils.jl")
-
-# Ground model export for closed-loop GHEs
-export ils, ics, fls, mils, mfls
-
-# Temporal superposition export
-export convolution, convolutionf, impulse_func, 
-    convolution_ns, impulse_func_ns, state_vector, state_indices
-
-# Spatial superposition export
-export bloc_matrix, successive_flux
-
-# Thermal resistance export
-export Reynold, Prandtl, Nusselt, friction_factor_Colebrook_White, resistance_fluid,
-    resistance_pipe,
-    resistance_borehole_multipole, resistance_total_internal_multipole,
-    resistance_borehole_effective
-
-# Temperature simulation export
-export fluid_temperature, outlet_temperature, inlet_temperature
-
-# Utils export
-export pchip_interpolation, set_nodes, borefield_xy, borefield_radius,
-    water_ρ, water_cp, water_k, water_μ,
-    head_loss_Darcy_Weisbach,
-    GHE, heat_load_profile
+include("temporal_superposition.jl")
 
 # Temperature simulations
-export g_model
+include("temperature_simulation.jl")
 
-"""
-    g_model(t, ks, Cs, rb, H, D, xy)
+# Utilities (GHE default parameters, heat load profile)
+include("utils.jl")
 
-Function that allows to generate a transfer function efficiently depending on the model required,
-the number of time steps and arrangement of the borefield. Interpolations are performed if there are
-more than 150 time steps, and more than 25 radius. #TODO: To complete
-# Arguments
-    - t: Time vector (nt x 1) [s]
-    - ks: Soil thermal conductivity (1x1) [W/mK]
-    - Cs: Soil volumetric specific heat (1x1) [J/m³K]
-    - rb: Borehole radius (1x1) [m]
-    - H: Borehole depth (1x1) [m]
-    - D: Borehole burried depth (1x1) [m]
-    - xy: Matrix of borehole coordinates where the line source is at (0,0) (nr x 2) [m]
-# Output
-    - g: The transfer function of the GHE (nt x 1) [°Cm/W]
-"""
-function g_model(t::Union{Real, AbstractVector{<:Real}}, ks::Real, Cs::Real, rb::Real, H::Real,
-    D::Real, xy::AbstractArray{<:Real}; model::String="fls")
-    # Set nodes if time vector is too long
-    #TODO: Add more ground models and and interpolation choices for radius.
-    nt = length(t)
-    if nt >= 150
-        s = set_nodes(nt, 150)
-    else
-        s = range(1, nt)
-    end
+# Temporal superposition exports
+export convolution, convolutionf, impulse_func,
+    convolution_ns, impulse_func_ns, state_vector, state_indices
 
-    # Select if spatial superposition is required or not
-    if size(xy, 1) > 1
-        gₛ = successive_flux(t[s], H, rb, D, ks, Cs, xy)
-    else
-        if model == "fls" || model == "FLS"
-            gₛ = fls(t[s], H, rb, D, ks, Cs)
-        end
-    end
+# Temperature simulation exports
+export fluid_temperature, outlet_temperature, inlet_temperature
 
-    # Interpolate to the right length
-    if nt > 150
-        return pchip_interpolation(t[s], gₛ, t)
-    else
-        return gₛ
-    end
-end
+# Utility exports
+export GHE, heat_load_profile
+
 end # module GroundHeatExchanger
