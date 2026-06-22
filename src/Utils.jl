@@ -1,3 +1,49 @@
+using PCHIPInterpolation
+
+"""
+    pchip_interpolation(tᵢ, vᵢ, t)
+
+Function that performs the complete interpolation of a vector using the PCHIP interpolation method.
+# Arguments
+    - `tᵢ`: The id on which to interpolate
+    - `vᵢ`: The vector to interpolate, sampled at `tᵢ`
+    - `t`: The new interpolated vector sample
+# Output
+    - `v`: The new interpolated vector
+"""
+function pchip_interpolation(tᵢ::AbstractVector{<:Real}, vᵢ::AbstractVector{<:Real},
+    t::AbstractVector{<:Real})
+    interp = Interpolator(tᵢ, vᵢ)
+    v = interp.(t)
+    return v
+end
+
+"""
+    set_nodes(nt, n₀)
+
+Function that sets a logarithmic progression of node positions on a transfer function.
+# Arguments
+    - `nt`: Total number of data in the input vectors [-]
+    - `n₀`: User defined number of nodes on the transfer function [-]
+# Output
+    - `id`: A vector of length "n₀" of node positions on the transfer function [-]
+"""
+function set_nodes(nt::Real, n₀::Integer)
+    # Basic inputs
+    n_tmp = n₀ - 1
+    id = Vector{Integer}(undef, n_tmp)
+    # Fill the vector with node positions
+    while length(id) < n₀
+        empty!(id)
+        for x in range(0, stop=log10(nt), length=n_tmp)
+            push!(id, round(Int, exp10(x)))
+        end
+        unique!(id)
+        n_tmp += 1
+    end
+    return id
+end
+
 """
     GHE()
 
@@ -29,8 +75,6 @@ exchanger applications.
     - `ϵ`: Roughness of pipes [m]
     - `vD`: Darcy velocity in the ground (groundwater flow) in m/s
     - `V`: Fluid flow rate [m³/s]
-# Example
-    t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
 """
 function GHE()
     # NOTE: water_k, water_cp, water_ρ, water_μ will be provided by BoreholeResistance
@@ -96,4 +140,21 @@ function heat_load_profile(t, A=2000, B=2190, C=80, D=2, E=0.01, F=0, G=0.95)
     Q = f(t) .+ (-1) .^ floor.(D / 8760 .* (t .- B)) .* abs.(f(t)) .+
         E .* (-1) .^ floor.(D / 8760 .* (t .- B)) .* sign.(cos.(D .* π / 4380 .* (t .- F)) .+ G)
     return Q
+end
+
+"""
+    head_loss_Darcy_Weisbach(L, r, V̇, f)
+
+Head loss in a pipe segment using the Darcy-Weisbach equation.
+# Arguments
+    - `L`: Pipe length [m]
+    - `r`: Pipe inner radius [m] (diameter D = 2r)
+    - `V̇`: Mean fluid speed [m/s]
+    - `f`: Darcy friction factor [-] (from `friction_factor_Colebrook_White` or
+        `friction_factor_Tkachenko_Mileikovskyi`)
+# Output
+    - `Δh`: Head loss [m]
+"""
+function head_loss_Darcy_Weisbach(L::Real, r::Real, V̇::Real, f::Real)
+    return f * (L / (2 * r)) * (V̇^2 / (2 * 9.81))
 end

@@ -1,126 +1,205 @@
 # GroundHeatExchanger.jl
 
-A Julia package for the thermal simulation of ground heat exchangers (GHEs). The package provides analytical ground models, temporal and spatial superposition techniques, and borehole thermal resistance calculations for single closed-loop borehole heat exchangers.
+Julia package for the complete thermal simulation of ground heat exchangers (GHEs). Acts as
+the integration layer for a three-package ecosystem:
 
-## Features
+```
+BoreholeResistance.jl          GroundResponse.jl
+  water_k/cp/ρ/μ                ILSModel, FLSModel, ...
+  resistance_borehole_effective  ground_response, successive_flux
+           ↘                            ↙
+           GroundHeatExchanger.jl
+           convolution (FFT), fluid_temperature, outlet_temperature, inlet_temperature
+           ground_response (with PCHIP), heat_load_profile
+```
 
-### Ground Models
-Analytical solutions for thermal response of borehole heat exchangers:
-- `ils` - Infinite line source (ILS) based on Ingersol (1948)
-- `ics` - Infinite cylindrical source (ICS) based on Carlsaw & Jaeger (1959)
-- `fls` - Finite line source (FLS) based on Claesson & Javed (2011)
-- `mils` - Moving infinite line source (MILS) based on Pasquier & Lamarche (2022)
-- `mfls` - Moving finite line source (MFLS) based on Guo et al. (2020)
+A single `using GroundHeatExchanger` exposes the full pipeline.
 
-All ground models support multiple dispatch for:
-- Single or multiple time steps
-- Single or multiple radii
-- 2D arrays for borefield radius calculations
-- Automatic type promotion and broadcasting
+## Quick start
 
-### Temporal Superposition
-Fast convolution techniques for transient thermal response:
-- `convolution` / `convolutionf` - FFT-based O(n log n) convolution for equally spaced time steps with stationary heat load profiles
-- `convolution_ns` - Convolution for non-stationary heat load profiles with time-varying flowrates
-- `state_vector` / `state_indices` - Helper functions for state transitions in non-stationary simulations
-- `impulse_func` / `impulse_func_ns` - Impulse response functions for superposition
+```julia
+using GroundHeatExchanger
 
-### Spatial Superposition (Borefield G-Functions)
-Methods for computing thermal interactions in borehole fields:
-- `bloc_matrix` - Block matrix formulation for g-function construction
-- `successive_flux` - Iterative successive flux method for rapid g-function computation
+# Geometry and ground properties
+H, D, rb, s, ro, ri = 150.0, 2.0, 0.08, 0.05, 0.022, 0.017
+ks, Cs, kg, kp      = 3.0, 2.11e6, 1.6, 0.4
+T0, V               = 10.0, 30/6e4    # 10°C undisturbed, 30 L/min flow
 
-### Borehole Thermal Resistance
-Thermal resistance calculations for U-tube heat exchangers:
-- `resistance_fluid` - Fluid-to-pipe convective resistance
-- `resistance_pipe` - Pipe conductive resistance  
-- `resistance_borehole_multipole` / `resistance_total_internal_multipole` - Multipole method for borehole thermal resistance (orders 0 and 1)
-- `resistance_borehole_effective` - Effective (total) borehole thermal resistance
-- `friction_factor_Colebrook_White` - Darcy friction factor calculation for pipe flow
-- `Reynold`, `Prandtl`, `Nusselt` - Dimensionless flow characteristics
+# Time vector: 1 year, hourly
+t = collect(3600.0:3600:3600*24*365)
 
-### Temperature Simulation
-Fluid temperature response in borehole heat exchangers:
-- `fluid_temperature` - Mean fluid temperature evolution over time
-- `outlet_temperature` - Outlet fluid temperature
-- `inlet_temperature` - Inlet fluid temperature
+# Fluid properties (from BoreholeResistance)
+kf = water_k(T0);  cf = water_cp(T0);  ρf = water_ρ(T0);  μf = water_μ(T0)
+Cf = cf * ρf       # volumetric specific heat [J/m³·K] for Tin/Tout
 
-### Utility Functions
-Helper functions for borefield design and analysis:
-- `pchip_interpolation` - Piecewise Cubic Hermite Interpolating Polynomial for smooth data interpolation
-- `set_nodes` - Logarithmic node positioning for transfer function computations
-- `borefield_xy` - Generate rectangular borefield borehole coordinates
-- `borefield_radius` - Calculate distances between boreholes in a borefield
-- `water_ρ`, `water_cp`, `water_k`, `water_μ` - Water thermophysical properties as functions of temperature
-- `head_loss_Darcy_Weisbach` - Pipe head loss calculations
-- `heat_load_profile` - Sinusoidal heat load profile generation with seasonal modulation
-- `GHE` - Pre-configured parameters for typical GHE systems
+# Borehole thermal resistance (Rb* from multipole method)
+Rb = resistance_borehole_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
+
+# Ground model and heat load
+model = FLSModel(H, D, ks, Cs)
+Q = heat_load_profile(t ./ 3600)      # [W], sinusoidal annual profile
+
+# Full simulation — g-function computed and PCHIP-compressed automatically
+Tf   = fluid_temperature(t, Q ./ H, model, rb, T0, ks, Rb)
+Tout = outlet_temperature(Tf, Q, V, Cf)
+Tin  = inlet_temperature(Tf, Q, V, Cf)
+```
+
+## Temperature simulation
+
+The mean fluid temperature follows:
+```
+Tf(t) = T0 + q(t)·Rb + (f★g)(t) / (2π·ks)
+```
+where `f★g` is the discrete convolution (temporal superposition) solved in O(n log n) via FFT.
+
+Outlet and inlet split symmetrically around the mean:
+```
+Tout = Tf − Q / (2·V·Cf)
+Tin  = Tf + Q / (2·V·Cf)
+```
+
+### Units
+
+| Quantity | Symbol | Unit |
+|---|---|---|
+| Borehole resistance | `Rb` | m·K/W |
+| g-function | `g` | °C·m/W |
+| Fluid specific heat | `cf` | J/kg·K — for `resistance_borehole_effective` |
+| Fluid volumetric heat | `Cf = cf·ρf` | J/m³·K — for `outlet_temperature`, `inlet_temperature` |
+
+### `fluid_temperature` overloads
+
+```julia
+# With pre-computed g-function vector
+fluid_temperature(t, q, g, T0, ks, Rb)              # q in W/m
+fluid_temperature(t, Q, g, H, T0, ks, Rb)           # Q in W, H in m
+
+# With ground model (g computed + PCHIP-compressed automatically)
+fluid_temperature(t, q, m, rb, T0, ks, Rb;          # single borehole
+    compress=true, n_nodes=150)
+fluid_temperature(t, q, m, rb, xy, T0, ks, Rb;      # borefield (xy: nb×2 matrix)
+    compress=true, n_nodes=150)
+fluid_temperature(t, Q, H, m, rb, T0, ks, Rb;       # total load Q in W
+    compress=true, n_nodes=150)
+```
+
+## PCHIP g-function compression
+
+For long hourly simulations (8760 steps/year × many years), evaluating g-functions at every
+time step is expensive. GHE's `ground_response` evaluates g at `n_nodes` logarithmically-spaced
+time nodes and uses PCHIP (Piecewise Cubic Hermite Interpolating Polynomial) to reconstruct the
+full vector. Pass `n_nodes=0` to skip compression:
+
+```julia
+g = ground_response(t, rb, xy, model)           # PCHIP compression, 150 nodes (default)
+g = ground_response(t, rb, xy, model; n_nodes=0) # exact, no compression
+```
+
+The `fluid_temperature` overloads apply this automatically via the same `n_nodes` kwarg.
+Node positions follow a log₁₀ scale via `set_nodes(nt, n₀)`; custom interpolation is possible
+via `pchip_interpolation(tᵢ, gᵢ, t)`.
+
+## Temporal superposition
+
+```julia
+convolution(q, g)                        # stationary (single state), FFT O(n log n)
+convolutionf(f, g)                       # stationary: pre-computed impulse function
+convolution_ns(q, g_matrix, state_vec)   # non-stationary: varying flow / properties
+```
+
+The non-stationary path handles time-varying operating conditions (e.g., variable flow rate
+or temperature-dependent fluid properties). Each state has its own column in the g-function
+matrix `g_matrix` (nt × n_states), and `state_vec` maps each time step to a column:
+
+```julia
+# Build per-state g-function matrix
+ks_states = [3.0, 2.0, 1.5]
+g_matrix = hcat([fls(t, rb, H, D, ks_i, Cs) for ks_i in ks_states]...)
+
+# State assignment and non-stationary temperature response
+ind, state, _ = state_indices(operating_condition_vec)
+state_vec = state_vector(ind, state, length(t))
+ΔT = convolution_ns(q, g_matrix, state_vec)
+```
+
+## Ground models (from GroundResponse.jl)
+
+| Struct | Parameters | Reference |
+|---|---|---|
+| `ILSModel(ks, Cs)` | Ground conductivity, heat capacity | Ingersol (1948) |
+| `ICSModel(rc, ks, Cs)` | Cylinder radius, ground properties | Carslaw & Jaeger (1959) |
+| `FLSModel(H, D, ks, Cs)` | Borehole depth and burial depth | Claesson & Javed (2011) |
+| `MILSModel(rb, ks, Cs, Cf, vD)` | Borehole radius, ground + fluid properties, Darcy velocity | Pasquier & Lamarche (2022) |
+| `MFLSModel(H, rb, D, ks, Cs, Cf, vD)` | Full FLS + groundwater flow | Guo et al. (2020) |
+
+All models are dispatched through `ground_response(t, rb, xy, m::AbstractGroundModel)`:
+- Single borehole (`size(xy,1) == 1`): direct g-function evaluation at the borehole wall.
+- Borefield: `successive_flux` spatial superposition is applied automatically.
+
+```julia
+# Borefield spatial superposition
+xy = borefield(:rectangle, 3, 4, 6.0)    # 3×4 rectangular grid, 6 m spacing
+g  = ground_response(t, rb, xy, model)   # successive_flux applied internally
+```
+
+## Scripts
+
+Run from the package root with `julia --project=script/ script/<name>.jl`.
+First-time setup:
+```
+julia --project=script/ -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+```
+Note: the temperature simulation script filename contains a space — quote it on the command line.
+
+| Script | Description |
+|---|---|
+| `script_temperature simulation.jl` | Full pipeline: FLS g → Rb → Tf/Tin/Tout, 1-year hourly |
+| `script_interpolation.jl` | PCHIP compression accuracy on the ILS model |
+| `script_temporal_superposition_stationary.jl` | FFT convolution, FLS g-function, 6-day load |
+| `script_temporal_superposition_nonstationary.jl` | Non-stationary convolution, 4 operating states |
+| `script_head_loss.jl` | Pipe head loss for pump sizing using Darcy-Weisbach |
 
 ## Installation
 
-The package is not yet registered. Install directly from the repository:
+These packages are not yet registered. Install as local dev dependencies from the parent folder:
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/gabriel-dion/GroundHeatExchanger.jl")
-```
-
-Or in the Julia REPL package manager (`]`):
-
-```
-pkg> add https://github.com/gabriel-dion/GroundHeatExchanger.jl
+Pkg.develop(path="../BoreholeResistance.jl")
+Pkg.develop(path="../GroundResponse.jl")
+Pkg.instantiate()
 ```
 
 ## Dependencies
 
-- [SpecialFunctions.jl](https://github.com/JuliaMath/SpecialFunctions.jl)
-- [QuadGK.jl](https://github.com/JuliaMath/QuadGK.jl)
-- [DSP.jl](https://github.com/JuliaDSP/DSP.jl)
-- [PCHIPInterpolation.jl](https://github.com/gerlero/PCHIPInterpolation.jl)
-- [LinearAlgebra](https://docs.julialang.org/en/v1/stdlib/LinearAlgebra/) (standard library)
-- [CairoMakie](https://github.com/MakieOrg/Makie.jl)
+### Library
+
+| Package | Used for |
+|---------|----------|
+| [BoreholeResistance.jl](https://github.com/GeothermalJL/BoreholeResistance.jl) | Borehole and fluid thermal resistances, water properties |
+| [GroundResponse.jl](https://github.com/GeothermalJL/GroundResponse.jl) | Ground thermal response models and borefield layouts |
+| [DSP.jl](https://github.com/JuliaDSP/DSP.jl) | `conv` / `conv!` for FFT-based temporal superposition |
+| [PCHIPInterpolation.jl](https://github.com/gerlero/PCHIPInterpolation.jl) | PCHIP g-function compression |
+
+### Scripts only
+
+| Package | Used in |
+|---------|---------|
+| [CairoMakie.jl](https://github.com/MakieOrg/Makie.jl) | All visualisation scripts |
 
 ## References
 
-### Ground Thermal Response Models
-- Ingersol, L. R. (1948). Theory of the ground pipe heat source for the heat pump. ASHVE Journal Section, Heating, Piping and Air Conditioning.
-- Carslaw, H. S., & Jaeger, J. C. (1959). Conduction of heat in solids. Oxford: Clarendon Press, 1959, 2nd Ed.
-- Claesson, J., & Javed, S. (2011). An analytical method to calculate borehole fluid temperatures for time-scales from minutes to decades. ASHRAE Transactions, 117(PART 2), 279–288.
-- Guo, Y., Hu, X., Banks, J., & Liu, W. V. (2020). Considering buried depth in the moving finite line source model for vertical borehole heat exchangers—A new solution. Energy and Buildings, 214, 109859. https://doi.org/10.1016/j.enbuild.2020.109859
-- Pasquier, P., & Lamarche, L. (2022). Analytic expressions for the moving infinite line source model. Geothermics, 103, 102413. https://doi.org/10.1016/j.geothermics.2022.102413
-
-### Temporal and Spatial Superposition
-- Marcotte, D., & Pasquier, P. (2008). Fast fluid and ground temperature computation for geothermal ground-loop heat exchanger systems. Geothermics, 37(6), 651–665. https://doi.org/10.1016/j.geothermics.2008.08.003
-- Pasquier, P., & Marcotte, D. (2013). Efficient computation of heat flux signals to ensure the reproduction of prescribed temperatures at several interacting heat sources. Applied Thermal Engineering, 59(1–2), 515–526. https://doi.org/10.1016/j.applthermaleng.2013.06.018
-- Dusseault, B., Pasquier, P., & Marcotte, D. (2018). A block matrix formulation for efficient g-function construction. Renewable Energy, 121, 249–260. https://doi.org/10.1016/j.renene.2017.12.092
-- Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental validation of non-stationary convolutions for the fast simulation of time-variant flowrates in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219. https://doi.org/10.1080/23744731.2023.2279468
-- Nguyen, A., & Pasquier, P. (2021). A successive flux estimation method for rapid g-function construction of small to large-scale ground heat exchanger. Renewable Energy, 165, 359–368. https://doi.org/10.1016/j.renene.2020.10.074
-
-### Borehole Thermal Resistance
-- Claesson, J., & Hellström, G. (2011). Multipole method to calculate borehole thermal resistances in a borehole heat exchanger. Hvac&R Research, 17(6), 895–911.
-- Javed, S., & Spitler, J. D. (2016). 3—Calculation of borehole thermal resistance. In S. J. Rees (Ed.), Advances in Ground-Source Heat Pump Systems (pp. 63–95). Woodhead Publishing. https://doi.org/10.1016/B978-0-08-100311-4.00003-0
-- Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. https://doi.org/10.1016/j.apenergy.2016.11.079
-- Claesson, J., & Javed, S. (2019). Explicit multipole formulas and thermal network models for calculating thermal resistances of double U-pipe borehole heat exchangers. Science and Technology for the Built Environment, 25(8), 980–992. https://doi.org/10.1080/23744731.2019.1620565
-
-### Foundational References
-- Hellström, Göran. 1991. "Ground Heat Storage : Thermal Analyses of Duct Storage Systems." http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
-- Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. Springer Nature Switzerland.
-- Carslaw, H. S., & Jaeger, J. C. (1959). Conduction of heat in solids. Oxford: Clarendon Press, 1959, 2nd Ed.
-- Claesson, J., & Javed, S. (2011). An analytical method to calculate borehole fluid temperatures for time-scales from minutes to decades. ASHRAE Transactions, 117(PART 2), 279–288.
-- Pasquier, P., & Lamarche, L. (2022). Analytic expressions for the moving infinite line source model. Geothermics, 103, 102413. https://doi.org/10.1016/j.geothermics.2022.102413
-- Guo, Y., Hu, X., Banks, J., & Liu, W. V. (2020). Considering buried depth in the moving finite line source model for vertical borehole heat exchangers—A new solution. Energy and Buildings, 214, 109859. https://doi.org/10.1016/j.enbuild.2020.109859
-- Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance calculation methods for grouted single U-tube ground heat exchangers. Applied Energy, 187, 790–806. https://doi.org/10.1016/j.apenergy.2016.11.079
-- Hellström, Göran. 1991. “Ground Heat Storage : Thermal Analyses of Duct Storage Systems.” http://www.lunduniversity.lu.se/o.o.i.s?id=24732&postid=2536279.
-- Lamarche, L. (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application. Springer Nature Switzerland.
-- Claesson, J., & Hellström, G. (2011). Multipole method to calculate borehole thermal resistances in a borehole heat exchanger. Hvac&R Research, 17(6), 895–911.
-- Javed, S., & Spitler, J. D. (2016). 3—Calculation of borehole thermal resistance. In S. J. Rees (Ed.), Advances in Ground-Source Heat Pump Systems (pp. 63–95). Woodhead Publishing. https://doi.org/10.1016/B978-0-08-100311-4.00003-0
-- Marcotte, D., & Pasquier, P. (2008). Fast fluid and ground temperature computation for geothermal ground-loop heat exchanger systems. Geothermics, 37(6), 651–665. https://doi.org/10.1016/j.geothermics.2008.08.003
-- Pasquier, P., & Marcotte, D. (2013). Efficient computation of heat flux signals to ensure the reproduction of prescribed temperatures at several interacting heat sources. Applied Thermal Engineering, 59(1–2), 515–526. https://doi.org/10.1016/j.applthermaleng.2013.06.018
-- Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental validation of non-stationary convolutions for the fast simulation of time-variant flowrates in ground heat exchangers. Science and Technology for the Built Environment, 30(3), 208–219. https://doi.org/10.1080/23744731.2023.2279468
-- Dusseault, B., Pasquier, P., & Marcotte, D. (2018). A block matrix formulation for efficient g-function construction. Renewable Energy, 121, 249–260. https://doi.org/10.1016/j.renene.2017.12.092
-- Nguyen, A., & Pasquier, P. (2021). A successive flux estimation method for rapid g-function construction of small to large-scale ground heat exchanger. Renewable Energy, 165, 359–368. https://doi.org/10.1016/j.renene.2020.10.074
-- Claesson, J., & Javed, S. (2019). Explicit multipole formulas and thermal network models for calculating thermal resistances of double U-pipe borehole heat exchangers. Science and Technology for the Built Environment, 25(8), 980–992. https://doi.org/10.1080/23744731.2019.1620565
-
-## License
-
-See [LICENSE.txt](LICENSE.txt).
+- Marcotte, D., & Pasquier, P. (2008). Fast fluid and ground temperature computation for GHE systems.
+  Geothermics, 37(6), 651–665.
+- Beaudry, G., Pasquier, P., & Nguyen, A. (2024). Non-stationary convolutions for time-variant
+  flowrates in GHEs. Science and Technology for the Built Environment, 30(3), 208–219.
+- Nguyen, A., & Pasquier, P. (2021). A successive flux estimation method for rapid g-function
+  construction. Renewable Energy, 165, 359–368.
+- Dusseault, B., Pasquier, P., & Marcotte, D. (2018). A block matrix formulation for g-function
+  construction. Renewable Energy, 121, 249–260.
+- Claesson, J., & Javed, S. (2011). An analytical method for borehole fluid temperatures.
+  ASHRAE Transactions, 117(PART 2), 279–288.
+- Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance methods. Applied Energy, 187.
+- Pasquier, P., Zarrella, A., & Labib, R. (2018). Application of ANNs to short-term g-functions.
+  Applied Thermal Engineering, 143, 910–921.
