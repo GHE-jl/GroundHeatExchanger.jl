@@ -9,13 +9,24 @@ DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 GroundResponse = "4e068bfd-c84d-4e7d-af33-179ff9550968"
 PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
 
+###################################################################################################
+# TO BE REMOVE, ONLY USED FOR THE ils_test_lamarche FUNCTION
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+
 [sources]
-BoreholeResistance = {path = "..\\BoreholeResistance.jl"}
-GroundResponse = {path = "..\\GroundResponse.jl"}
+
+###################################################################################################
+# IF USING LINUX, REPLACE BY {path = "..\\BoreholeResistance.jl"}
+BoreholeResistance = {path = "../BoreholeResistance.jl"}
+
+###################################################################################################
+# IF USING LINUX, REPLACE BY {path = "..\\BoreholeResistance.jl"}
+GroundResponse = {path = "../GroundResponse.jl"}
 
 [compat]
 DSP = "0.8"
 PCHIPInterpolation = "0.2"
+SpecialFunctions = "2.8.0"
 julia = "1.11"
 
 [extras]

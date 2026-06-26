@@ -15,7 +15,7 @@ using GroundResponse: AbstractGroundModel, ILSModel, ICSModel, FLSModel, MILSMod
 include("temporal_superposition.jl")
 
 # Utilities — must precede temperature_simulation.jl (pchip_interpolation, set_nodes)
-include("utils.jl")
+include("Utils.jl")
 
 # Temperature simulation and g-function wrappers
 include("temperature_simulation.jl")
