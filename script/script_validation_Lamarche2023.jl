@@ -1,5 +1,10 @@
 # Validation script containig the validations for the functions of GroundHeatExchanger.jl
 
+import Pkg; Pkg.activate(@__DIR__)
+# Pkg.instantiate() # Once per project, to install dependencies
+
+using Revise
+
 # TODO : add multiple dispatch to the accuracy function (ex: array)
 function accuracy(val_ref::Real, val_GHE::Real)
     """

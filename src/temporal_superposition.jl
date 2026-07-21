@@ -2,21 +2,19 @@ using DSP: conv, conv!
 
 """
     convolution(q, g)
-    convolutionf(f, g)
 
 Function that performs temporal superposition through a convolution product solved in the spectral
 domain using fast fourier transform O(nlogn). Padding is used to avoid circular convolution.
 Time steps are assumed to be equally spaced. The convolution is performed with the incremental
-thermal load function, which is computed from the load vector `q` using the `impulse_func` function
-in the "convolution()" function, but is already pre-computed in the "convolutionf()" function.
+thermal load function, which is computed from the load vector `q` using the `impulse_func` function.
+For a pre-computed incremental load function, use [`convolutionf`](@ref) instead.
 # Arguments
     - `q`: Load functions (nₜ x 1) [W/m, W, °C]
-    - `f`: Incremental thermal load function (nₜ x 1) [W/m, W, °C] (impulse_func())
     - `g`: Transfer function (or g-function) (nₜ x 1) [°Cm/W, °C/W, -]
 # Output
     - Convolved signal. Typically temperature response (nₜ x 1) [°C].
 # Reference
-    - Marcotte, D., & Pasquier, P. (2008). Fast fluid and ground temperature computation for 
+    - Marcotte, D., & Pasquier, P. (2008). Fast fluid and ground temperature computation for
         geothermal ground-loop heat exchanger systems. Geothermics, 37(6), 651–665.
         https://doi.org/10.1016/j.geothermics.2008.08.003
     - Pasquier, P., & Marcotte, D. (2013). Efficient computation of heat flux signals to ensure the
@@ -30,6 +28,19 @@ function convolution(q::AbstractVector{T}, g::AbstractVector{T}) where {T<:Abstr
     # Compute the impulse function from the load vector q (DSP.conv function)
     return @view conv(impulse_func(q), g)[1:n]
 end
+"""
+    convolutionf(f, g)
+
+Variant of [`convolution`](@ref) that takes a **pre-computed** incremental thermal load function `f`
+(as returned by [`impulse_func`](@ref)) instead of the raw load vector `q`. Useful when the same
+incremental load is convolved with several g-functions, since the impulse step is computed only
+once. The FFT-based convolution and zero-padding are identical to [`convolution`](@ref).
+# Arguments
+    - `f`: Incremental thermal load function (nₜ x 1) [W/m, W, °C] (from `impulse_func`)
+    - `g`: Transfer function (or g-function) (nₜ x 1) [°Cm/W, °C/W, -]
+# Output
+    - Convolved signal. Typically temperature response (nₜ x 1) [°C].
+"""
 function convolutionf(f::AbstractVector{T}, g::AbstractVector{T}) where {T<:AbstractFloat}
     # Check if f and g are vectors of the same length
     n = length(f)
@@ -59,23 +70,16 @@ end
 
 """
     convolution_ns!(dT, f, g)
-    convolution_ns(f, g)
-    convolution_ns(q, g, state_vec)
-    convolution_ns(q, g, ind, state)
 
-Function that performs temporal superposition for varying operating conditions through a
-non-stationary convolution solved in the spectral domain. The varying operating conditions are
-defined by the `state_vec`, which assigns each time step to a specific state. Each state corresponds
-to a specific column in the transfer function matrix `g`. Padding is used to avoid circular
-convolution.
+In-place, non-stationary temporal superposition: accumulates the per-state convolutions of the
+incremental load matrix `f` with the g-function matrix `g` into the pre-allocated output `dT`. Each
+state (operating condition) corresponds to one column of `f` and `g`; padding is used to avoid
+circular convolution. This is the mutating core used by the allocating [`convolution_ns`](@ref)
+overloads.
 # Arguments
-    - `f`: Incremental thermal load function (nₜ x nₛ) [W/m, W, °C] (incremental_func_ns())
-    - `q`: Load functions (nₜ x 1) [W/m, W, °C]
-    - `g`: Matrix of transfer functions (or g-function) (nₜ x nₛ) [°Cm/W, °C/W, -]
-        - `nₛ`: Number of states (operating conditions).
-    - `state_vec`: State index for each time step (nₜ x 1) [-], with values from 1 to nₛ.
-    - `ind`: Indices of state change on the vectors [-]
-    - `state`: State index for each segment delimited by the indices [-]
+    - `dT`: Pre-allocated output vector (nₜ x 1) [°C], overwritten in place
+    - `f`: Incremental thermal load function (nₜ x nₛ) [W/m, W, °C] (from `impulse_func_ns`)
+    - `g`: Matrix of transfer functions (nₜ x nₛ) [°Cm/W, °C/W, -], one column per state
 # Output
     - `dT`: Convolved signal. Typically temperature response (nₜ x 1) [°C].
 # Reference
@@ -108,6 +112,32 @@ function convolution_ns!(dT::AbstractVector{T}, f::AbstractMatrix{T}, g::Abstrac
     end
     return dT
 end
+"""
+    convolution_ns(f, g)
+    convolution_ns(q, g, state_vec)
+    convolution_ns(q, g, ind, state)
+
+Allocating, non-stationary temporal superposition — the out-of-place counterpart of
+[`convolution_ns!`](@ref). Each state (operating condition) has its own column in the g-function
+matrix `g`; the incremental load is split per state before the per-state convolutions are summed.
+The state assignment is given either directly through a pre-computed incremental matrix `f`, through
+a `state_vec` mapping each time step to a state, or through `(ind, state)` change indices (converted
+to a state vector via [`state_vector`](@ref)).
+# Arguments
+    - `f`: Incremental thermal load function (nₜ x nₛ) [W/m, W, °C] (from `impulse_func_ns`)
+    - `q`: Load functions (nₜ x 1) [W/m, W, °C]
+    - `g`: Matrix of transfer functions (nₜ x nₛ) [°Cm/W, °C/W, -], one column per state
+    - `state_vec`: State index for each time step (nₜ x 1) [-], with values from 1 to nₛ
+    - `ind`: Indices of state change on the vectors [-]
+    - `state`: State index for each segment delimited by the indices [-]
+# Output
+    - `dT`: Convolved signal. Typically temperature response (nₜ x 1) [°C].
+# Reference
+    - Beaudry, G., Pasquier, P., & Nguyen, A. (2024). New formulations and experimental validation of
+        non-stationary convolutions for the fast simulation of time-variant flowrates in ground heat
+        exchangers. Science and Technology for the Built Environment, 30(3), 208–219.
+        https://doi.org/10.1080/23744731.2023.2279468
+"""
 function convolution_ns(f::AbstractMatrix{T}, g::AbstractMatrix{T}) where {T<:AbstractFloat}
     dT = zeros(T, size(f, 1))
     return convolution_ns!(dT, f, g)

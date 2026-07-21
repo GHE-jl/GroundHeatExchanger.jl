@@ -4,18 +4,9 @@ using GroundHeatExchanger
 @testset "GroundHeatExchanger.jl" begin
 
     # Shared fixture — GHE() provides realistic parameters; Rb is used as a scalar fixture.
-    _, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V = GHE()
+    _, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, vD, V = GHE()
     cf = water_cp(T0)
-    Rb = resistance_borehole_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
-
-    @testset "set_nodes" begin
-        id = set_nodes(1000, 50)
-        @test length(id) == 50
-        @test id[1]   == 1
-        @test id[end] == 1000
-        @test issorted(id)
-        @test allunique(id)
-    end
+    Rb = resistance_ULoop_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
 
     @testset "pchip_interpolation" begin
         tᵢ  = [1.0, 2.0, 4.0, 8.0, 10.0]
@@ -31,20 +22,12 @@ using GroundHeatExchanger
         @test V > 0 && Cf > 0
     end
 
-    @testset "heat_load_profile" begin
+    @testset "ground_load_profile" begin
         t_h = collect(0.0:1.0:8760.0)
-        Q_h = heat_load_profile(t_h)
+        Q_h = ground_load_profile(t_h)
         @test length(Q_h) == length(t_h)
         @test !all(iszero, Q_h)
-        @test heat_load_profile(0.0) isa Real    # scalar input
-    end
-
-    @testset "head_loss_Darcy_Weisbach" begin
-        L_p, r_p, u_p, f_p = 100.0, 0.02, 1.0, 0.02
-        Δh = head_loss_Darcy_Weisbach(L_p, r_p, u_p, f_p)
-        @test Δh ≈ f_p * (L_p / (2r_p)) * (u_p^2 / (2 * 9.81))
-        @test head_loss_Darcy_Weisbach(2L_p, r_p, u_p, f_p) ≈ 2Δh   # linear in L
-        @test head_loss_Darcy_Weisbach(L_p, r_p, 2u_p, f_p) ≈ 4Δh   # quadratic in u
+        @test ground_load_profile(0.0) isa Real    # scalar input
     end
 
     @testset "impulse_func" begin
@@ -153,12 +136,12 @@ using GroundHeatExchanger
     n_sim  = length(t_sim)
     model  = FLSModel(H, D, ks, Cs)
     g_sim  = ground_response(t_sim, rb, [0.0 0.0], model)
-    Q_sim  = heat_load_profile(t_sim ./ 3600)
+    Q_sim  = ground_load_profile(t_sim ./ 3600)
     q_sim  = Q_sim ./ H
 
-    @testset "ground_response wrapper" begin
-        g_full  = ground_response(t_sim, rb, [0.0 0.0], model; n_nodes=0)
-        g_pchip = ground_response(t_sim, rb, [0.0 0.0], model; n_nodes=30)
+    @testset "ground_response" begin
+        g_full  = ground_response(t_sim, rb, [0.0 0.0], model; interp=false)
+        g_pchip = ground_response(t_sim, rb, [0.0 0.0], model; interp=true)
         @test length(g_full)  == n_sim
         @test length(g_pchip) == n_sim
         @test issorted(g_full)   # FLS g-function is monotone increasing
@@ -180,9 +163,7 @@ using GroundHeatExchanger
         # All overloads agree
         Tf_g = fluid_temperature(t_sim, q_sim, g_sim, T0, ks, Rb)
         Tf_m = fluid_temperature(t_sim, q_sim, model, rb, T0, ks, Rb)
-        Tf_Q = fluid_temperature(t_sim, Q_sim, g_sim, H, T0, ks, Rb)
         @test Tf_g ≈ Tf_m
-        @test Tf_g ≈ Tf_Q
     end
 
     @testset "outlet and inlet temperature" begin

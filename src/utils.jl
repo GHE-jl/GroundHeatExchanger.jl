@@ -1,5 +1,3 @@
-using PCHIPInterpolation
-
 """
     pchip_interpolation(tᵢ, vᵢ, t)
 
@@ -16,32 +14,6 @@ function pchip_interpolation(tᵢ::AbstractVector{<:Real}, vᵢ::AbstractVector{
     interp = Interpolator(tᵢ, vᵢ)
     v = interp.(t)
     return v
-end
-
-"""
-    set_nodes(nt, n₀)
-
-Function that sets a logarithmic progression of node positions on a transfer function.
-# Arguments
-    - `nt`: Total number of data in the input vectors [-]
-    - `n₀`: User defined number of nodes on the transfer function [-]
-# Output
-    - `id`: A vector of length "n₀" of node positions on the transfer function [-]
-"""
-function set_nodes(nt::Real, n₀::Integer)
-    # Basic inputs
-    n_tmp = n₀ - 1
-    id = Vector{Integer}(undef, n_tmp)
-    # Fill the vector with node positions
-    while length(id) < n₀
-        empty!(id)
-        for x in range(0, stop=log10(nt), length=n_tmp)
-            push!(id, round(Int, exp10(x)))
-        end
-        unique!(id)
-        n_tmp += 1
-    end
-    return id
 end
 
 """
@@ -72,13 +44,11 @@ exchanger applications.
     - `ρp`: Pipe density [kg/m³]
     - `ρf`: Fluid density [kg/m³]
     - `μf`: Fluid dynamic viscosity [Pa·s or kg/(m·s)]
-    - `ϵ`: Roughness of pipes [m]
     - `vD`: Darcy velocity in the ground (groundwater flow) in m/s
     - `V`: Fluid flow rate [m³/s]
 """
 function GHE()
-    # NOTE: water_k, water_cp, water_ρ, water_μ will be provided by BoreholeResistance
-    # once inter-package dependencies are wired up.
+    # Fluid properties (water_k/cp/ρ/μ) come from BoreholeResistance, re-exported by GHE.
     t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500)) # Time (log) [s]
     H = 150.0                       # Borehole depth [m]
     D = 2.0                         # Borehole buried depth [m]
@@ -100,34 +70,33 @@ function GHE()
     ρp = 1000.0                     # Pipe density [kg/m³]
     ρf = water_ρ(T0)                # Fluid density [kg/m³]
     μf = water_μ(T0)                # Fluid dynamic viscosity [Pa.s or kg/m/s]
-    ϵ = 1e-5                        # roughness of pipes [m]
     vD = 1e-7                       # Darcy velocity in [m/s]
     V = 30/6e4                      # Fluid flow rate in m³/s (30 L/s)
-    return t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, ϵ, vD, V
+    return t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, vD, V
 end
 
 """
-    heat_load_profile(t, A, B, C, D, E, F, G)
+    ground_load_profile(t, A, B, C, D, E, F, G)
 
-Function that defines a heat load profile for testing the convolution of the g-function with a heat
-load profile. See Eqs. 7 and 8 of Bernier 2004.
+Function that defines a ground heat load profile for testing the convolution of the g-function with
+a heat load profile. See Eqs. 7 and 8 of Bernier 2004.
 # Arguments
-    - `t`: Time vector or scalar [s]
-    - `A`: Amplitude parameter [W] (default: 10246)
-    - `B`: Phase shift parameter [hours] (default: 2409)
-    - `C`: Harmonic coefficient [hours] (default: 64)
+    - `t`: Time vector or scalar *in hours* [h]
+    - `A`: Amplitude parameter [W] (default: 2000)
+    - `B`: Phase shift parameter [hours] (default: 2190)
+    - `C`: Harmonic coefficient [hours] (default: 80)
     - `D`: Period parameter [-] (default: 2)
     - `E`: Modulation amplitude [-] (default: 0.01)
     - `F`: Phase offset [hours] (default: 0)
     - `G`: Phase parameter [-] (default: 0.95)
 # Output
-    - `Q`: Heat load profile [W]
+    - `Q`: Ground heat load profile [W]
 # Reference
     - Bernier, M. A., Pinel, P., Labib, R., & Paillot, R. (2004). A Multiple Load Aggregation
         Algorithm for Annual Hourly Simulations of GCHP Systems. HVAC&R Research, 10(4), 471–487.
         https://doi.org/10.1080/10789669.2004.10391115
 """
-function heat_load_profile(t, A=2000, B=2190, C=80, D=2, E=0.01, F=0, G=0.95)
+function ground_load_profile(t, A=2000, B=2190, C=80, D=2, E=0.01, F=0, G=0.95)
     function f(t)
         harmonics = zeros(size(t))
         for n in 1:3
@@ -140,21 +109,4 @@ function heat_load_profile(t, A=2000, B=2190, C=80, D=2, E=0.01, F=0, G=0.95)
     Q = f(t) .+ (-1) .^ floor.(D / 8760 .* (t .- B)) .* abs.(f(t)) .+
         E .* (-1) .^ floor.(D / 8760 .* (t .- B)) .* sign.(cos.(D .* π / 4380 .* (t .- F)) .+ G)
     return Q
-end
-
-"""
-    head_loss_Darcy_Weisbach(L, r, V̇, f)
-
-Head loss in a pipe segment using the Darcy-Weisbach equation.
-# Arguments
-    - `L`: Pipe length [m]
-    - `r`: Pipe inner radius [m] (diameter D = 2r)
-    - `V̇`: Mean fluid speed [m/s]
-    - `f`: Darcy friction factor [-] (from `friction_factor_Colebrook_White` or
-        `friction_factor_Tkachenko_Mileikovskyi`)
-# Output
-    - `Δh`: Head loss [m]
-"""
-function head_loss_Darcy_Weisbach(L::Real, r::Real, V̇::Real, f::Real)
-    return f * (L / (2 * r)) * (V̇^2 / (2 * 9.81))
 end

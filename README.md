@@ -6,11 +6,11 @@ the integration layer for a three-package ecosystem:
 ```
 BoreholeResistance.jl          GroundResponse.jl
   water_k/cp/ρ/μ                ILSModel, FLSModel, ...
-  resistance_borehole_effective  ground_response, successive_flux
+  resistance_ULoop_effective  ground_response, successive_flux
            ↘                            ↙
            GroundHeatExchanger.jl
            convolution (FFT), fluid_temperature, outlet_temperature, inlet_temperature
-           ground_response (with PCHIP), heat_load_profile
+           ground_response (with PCHIP), ground_load_profile
 ```
 
 A single `using GroundHeatExchanger` exposes the full pipeline.
@@ -33,11 +33,11 @@ kf = water_k(T0);  cf = water_cp(T0);  ρf = water_ρ(T0);  μf = water_μ(T0)
 Cf = cf * ρf       # volumetric specific heat [J/m³·K] for Tin/Tout
 
 # Borehole thermal resistance (Rb* from multipole method)
-Rb = resistance_borehole_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
+Rb = resistance_ULoop_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
 
 # Ground model and heat load
 model = FLSModel(H, D, ks, Cs)
-Q = heat_load_profile(t ./ 3600)      # [W], sinusoidal annual profile
+Q = ground_load_profile(t ./ 3600)      # [W], sinusoidal annual profile
 
 # Full simulation — g-function computed and PCHIP-compressed automatically
 Tf   = fluid_temperature(t, Q ./ H, model, rb, T0, ks, Rb)
@@ -65,7 +65,7 @@ Tin  = Tf + Q / (2·V·Cf)
 |---|---|---|
 | Borehole resistance | `Rb` | m·K/W |
 | g-function | `g` | °C·m/W |
-| Fluid specific heat | `cf` | J/kg·K — for `resistance_borehole_effective` |
+| Fluid specific heat | `cf` | J/kg·K — for `resistance_ULoop_effective` |
 | Fluid volumetric heat | `Cf = cf·ρf` | J/m³·K — for `outlet_temperature`, `inlet_temperature` |
 
 ### `fluid_temperature` overloads
@@ -73,32 +73,31 @@ Tin  = Tf + Q / (2·V·Cf)
 ```julia
 # With pre-computed g-function vector
 fluid_temperature(t, q, g, T0, ks, Rb)              # q in W/m
-fluid_temperature(t, Q, g, H, T0, ks, Rb)           # Q in W, H in m
 
 # With ground model (g computed + PCHIP-compressed automatically)
-fluid_temperature(t, q, m, rb, T0, ks, Rb;          # single borehole
-    compress=true, n_nodes=150)
-fluid_temperature(t, q, m, rb, xy, T0, ks, Rb;      # borefield (xy: nb×2 matrix)
-    compress=true, n_nodes=150)
-fluid_temperature(t, Q, H, m, rb, T0, ks, Rb;       # total load Q in W
-    compress=true, n_nodes=150)
+fluid_temperature(t, q, m, rb, T0, ks, Rb; interp=true)       # single borehole
+fluid_temperature(t, q, m, rb, xy, T0, ks, Rb; interp=true)   # borefield (xy: nb×2 matrix)
 ```
+
+The load is always the heat load **per unit length** `q` [W/m]. Convert a total load `Q` [W]
+yourself by dividing by the **entire** borehole length `L = H · (number of boreholes)`:
+`q = Q / L`. This is left to the caller on purpose — dividing `Q` by a single borehole depth `H`
+instead of the full field length is a common mistake, so the `Q`/`H` overloads were removed.
 
 ## PCHIP g-function compression
 
 For long hourly simulations (8760 steps/year × many years), evaluating g-functions at every
-time step is expensive. GHE's `ground_response` evaluates g at `n_nodes` logarithmically-spaced
-time nodes and uses PCHIP (Piecewise Cubic Hermite Interpolating Polynomial) to reconstruct the
-full vector. Pass `n_nodes=0` to skip compression:
+time step is expensive. `ground_response` (re-exported from GroundResponse.jl) evaluates g on a
+sub-sampled set of logarithmically-spaced time nodes and uses PCHIP (Piecewise Cubic Hermite
+Interpolating Polynomial) to reconstruct the full vector. This is toggled by the `interp` keyword:
 
 ```julia
-g = ground_response(t, rb, xy, model)           # PCHIP compression, 150 nodes (default)
-g = ground_response(t, rb, xy, model; n_nodes=0) # exact, no compression
+g = ground_response(t, rb, xy, model)               # interp=true (default): PCHIP compression
+g = ground_response(t, rb, xy, model; interp=false) # exact, no compression
 ```
 
-The `fluid_temperature` overloads apply this automatically via the same `n_nodes` kwarg.
-Node positions follow a log₁₀ scale via `set_nodes(nt, n₀)`; custom interpolation is possible
-via `pchip_interpolation(tᵢ, gᵢ, t)`.
+The `fluid_temperature` overloads apply this automatically via the same `interp` kwarg. For
+reconstructing your own signals from a node subset, GHE also exposes `pchip_interpolation(tᵢ, gᵢ, t)`.
 
 ## Temporal superposition
 
@@ -155,10 +154,9 @@ Note: the temperature simulation script filename contains a space — quote it o
 | Script | Description |
 |---|---|
 | `script_temperature simulation.jl` | Full pipeline: FLS g → Rb → Tf/Tin/Tout, 1-year hourly |
-| `script_interpolation.jl` | PCHIP compression accuracy on the ILS model |
 | `script_temporal_superposition_stationary.jl` | FFT convolution, FLS g-function, 6-day load |
-| `script_temporal_superposition_nonstationary.jl` | Non-stationary convolution, 4 operating states |
-| `script_head_loss.jl` | Pipe head loss for pump sizing using Darcy-Weisbach |
+| `script_temporal_superposition_nonstationary.jl` | Non-stationary convolution, 3 operating states |
+| `script_outlet_transfer_function.jl` | Short- + long-term outlet (EWT) transfer function, Pasquier et al. (2018) |
 
 ## Installation
 
@@ -177,8 +175,8 @@ Pkg.instantiate()
 
 | Package | Used for |
 |---------|----------|
-| [BoreholeResistance.jl](https://github.com/GeothermalJL/BoreholeResistance.jl) | Borehole and fluid thermal resistances, water properties |
-| [GroundResponse.jl](https://github.com/GeothermalJL/GroundResponse.jl) | Ground thermal response models and borefield layouts |
+| [BoreholeResistance.jl](https://github.com/GHE-jl/BoreholeResistance.jl) | Borehole and fluid thermal resistances, water properties |
+| [GroundResponse.jl](https://github.com/GHE-jl/GroundResponse.jl) | Ground thermal response models and borefield layouts |
 | [DSP.jl](https://github.com/JuliaDSP/DSP.jl) | `conv` / `conv!` for FFT-based temporal superposition |
 | [PCHIPInterpolation.jl](https://github.com/gerlero/PCHIPInterpolation.jl) | PCHIP g-function compression |
 
