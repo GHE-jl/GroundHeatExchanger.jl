@@ -39,8 +39,8 @@ export water_k, water_cp, water_ρ, water_μ
 export Reynolds, Prandtl, Nusselt, Nusselt_annulus
 export friction_factor_Colebrook_White, friction_factor_Tkachenko_Mileikovskyi
 export resistance_fluid, resistance_pipe
-export resistance_borehole_multipole, resistance_total_internal_multipole,
-    resistance_borehole_effective
+export resistance_ULoop_borehole, resistance_ULoop_total_internal,
+    resistance_ULoop_effective
 
 # Re-exports from GroundResponse
 export AbstractGroundModel
