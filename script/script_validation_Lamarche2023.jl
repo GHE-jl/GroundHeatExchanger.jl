@@ -1,5 +1,8 @@
 # Validation script containig the validations for the functions of GroundHeatExchanger.jl
 
+import Pkg; Pkg.activate(@__DIR__)
+Pkg.instantiate() # Once per project, to install dependencies
+
 using Test
 using CoolProp
 using GroundHeatExchanger
