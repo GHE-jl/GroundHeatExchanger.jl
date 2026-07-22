@@ -24,6 +24,13 @@ Modules = [GroundHeatExchanger]
 - [`outlet_temperature`](@ref), [`inlet_temperature`](@ref) — ends of the loop
 - [`outlet_transfer_function`](@ref) — complete short-/long-term outlet (EWT) transfer function
 
+### Short-term ANN model
+
+- [`short_term_response`](@ref) — ANN-based short-term outlet transfer function
+  (Pasquier, Zarrella & Labib, 2018)
+- [`short_term_nodes`](@ref) — raw ANN transfer function on its 85 native time nodes (the
+  building block behind `short_term_response` and `outlet_transfer_function`)
+
 ### Ground response and compression
 
 - `ground_response` — g-function interface, re-exported from

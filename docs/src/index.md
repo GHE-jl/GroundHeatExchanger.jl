@@ -33,6 +33,10 @@ On top of the two upstream packages, `GroundHeatExchanger.jl` provides:
   ([`convolution_ns`](@ref)) for time-varying operating conditions.
 - **Fluid temperatures** — [`fluid_temperature`](@ref), [`outlet_temperature`](@ref) and
   [`inlet_temperature`](@ref) from the load, resistance and g-function.
+- **Short-term outlet ANN** — [`short_term_response`](@ref) / [`short_term_nodes`](@ref), the
+  artificial neural network of Pasquier, Zarrella & Labib (2018) that emulates a combined
+  borehole + ground short-term response, joined to any long-term ground model by
+  [`outlet_transfer_function`](@ref).
 - **g-function compression helper** — [`pchip_interpolation`](@ref) for reconstructing an expensive
   signal from a node subset with shape-preserving PCHIP interpolation (the same kind of compression
   `ground_response` applies internally via `interp`).

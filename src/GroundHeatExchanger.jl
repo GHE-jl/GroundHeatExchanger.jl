@@ -4,12 +4,17 @@ using DSP
 using PCHIPInterpolation
 using BoreholeResistance
 using GroundResponse: AbstractGroundModel, ILSModel, ICSModel, FLSModel, MILSModel,
-    MFLSModel, ground_response, ils, ics, fls, mils, mfls, short_term_response, short_term_nodes,
+    MFLSModel, ground_response, ils, ics, fls, mils, mfls,
     successive_flux, bloc_matrix, borefield_geometry, borefield, borefield_rectangle,
     borefield_line, borefield_circle, borefield_L, borefield_U, borefield_open_rectangle
 
 # Utilities (pchip_interpolation, GHE, ground_load_profile)
 include("utils.jl")
+
+# Short-term ANN (Pasquier, Zarrella & Labib, 2018) — `short_term_response`/`short_term_nodes`.
+# Native to this package: it models the combined borehole + ground outlet response, not a pure
+# ground kernel, so it lives here rather than in GroundResponse.jl.
+include("short_term_ann.jl")
 
 # Temporal superposition (FFT-based convolution)
 include("temporal_superposition.jl")
@@ -22,8 +27,10 @@ export convolution, convolutionf, impulse_func, convolution_ns!,
     convolution_ns, impulse_func_ns, state_vector, state_indices
 
 # Temperature simulation
-export fluid_temperature, outlet_temperature, inlet_temperature
-export short_term_response, short_term_nodes, outlet_transfer_function
+export fluid_temperature, outlet_temperature, inlet_temperature, outlet_transfer_function
+
+# Short-term ANN (Pasquier, Zarrella & Labib, 2018)
+export short_term_response, short_term_nodes
 
 # Interpolation utilities
 export pchip_interpolation

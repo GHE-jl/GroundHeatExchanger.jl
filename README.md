@@ -157,6 +157,7 @@ Note: the temperature simulation script filename contains a space — quote it o
 | `script_temporal_superposition_stationary.jl` | FFT convolution, FLS g-function, 6-day load |
 | `script_temporal_superposition_nonstationary.jl` | Non-stationary convolution, 3 operating states |
 | `script_outlet_transfer_function.jl` | Short- + long-term outlet (EWT) transfer function, Pasquier et al. (2018) |
+| `script_short_term_validation.jl` | Short-term ANN (`short_term_nodes`) validated against the MATLAB reference (5 cases spanning the training range) |
 
 ## Installation
 

@@ -69,8 +69,8 @@ borehole geometry, thermal capacity and vertical fluid advection dominate, and a
 short-term transfer function is required. [`outlet_transfer_function`](@ref) builds the complete
 dimensionless transfer function of the borehole **outlet** temperature (``T_{out}``, i.e. the
 source-side entering water temperature) from minutes to decades by joining the artificial neural
-network of Pasquier, Zarrella & Labib (2018) — reached through the re-exported
-`short_term_response` — to any long-term `AbstractGroundModel`. The long-term borehole-wall
+network of Pasquier, Zarrella & Labib (2018) — [`short_term_response`](@ref) / [`short_term_nodes`](@ref)
+— to any long-term `AbstractGroundModel`. The long-term borehole-wall
 response is converted to an outlet transfer function through the effective borehole resistance
 ``R_b^*`` and shifted to meet the short-term curve at the 7-day contact time:
 
@@ -91,4 +91,6 @@ fluid_temperature
 outlet_temperature
 inlet_temperature
 outlet_transfer_function
+short_term_response
+short_term_nodes
 ```
