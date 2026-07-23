@@ -156,8 +156,9 @@ Note: the temperature simulation script filename contains a space — quote it o
 | `script_temperature simulation.jl` | Full pipeline: FLS g → Rb → Tf/Tin/Tout, 1-year hourly |
 | `script_temporal_superposition_stationary.jl` | FFT convolution, FLS g-function, 6-day load |
 | `script_temporal_superposition_nonstationary.jl` | Non-stationary convolution, 3 operating states |
-| `script_outlet_transfer_function.jl` | Short- + long-term outlet (EWT) transfer function, Pasquier et al. (2018) |
-| `script_short_term_validation.jl` | Short-term ANN (`short_term_nodes`) validated against the MATLAB reference (5 cases spanning the training range) |
+| `script_outlet_transfer_function.jl` | Short- + long-term outlet (EWT) transfer function: Pasquier et al. (2018) Figs. 2a/3 (`PublishedANN`), plus a `PublishedANN` vs `DeepANN` borefield comparison |
+| `script_ann_validation.jl` | Short-term `PublishedANN` and `DeepANN` (5 cases each) plotted against their MATLAB references (`ANN_gfunction.m` / `SULoop_TRCMz_ANN.m`) at native nodes, with the interpolated `short_term_response` overlaid |
+| `script_validation_Lamarche2023.jl` | `@test`-based validation of Reynolds number, fluid properties, ILS/ICS/FLS g-functions and borehole/internal resistance against worked examples from Lamarche's textbook |
 
 ## Installation
 
@@ -200,5 +201,8 @@ Pkg.instantiate()
 - Claesson, J., & Javed, S. (2011). An analytical method for borehole fluid temperatures.
   ASHRAE Transactions, 117(PART 2), 279–288.
 - Javed, S., & Spitler, J. (2017). Accuracy of borehole thermal resistance methods. Applied Energy, 187.
-- Pasquier, P., Zarrella, A., & Labib, R. (2018). Application of ANNs to short-term g-functions.
-  Applied Thermal Engineering, 143, 910–921.
+- Pasquier, P., Zarrella, A., & Labib, R. (2018). Application of ANNs to short-term g-functions
+  (`PublishedANN`). Applied Thermal Engineering, 143, 910–921.
+- Pasquier, P., & Marcotte, D. (2020). Robust identification of volumetric heat capacity and
+  analysis of thermal response tests by Bayesian inference with correlated residuals (`DeepANN`,
+  the default short-term model). Applied Energy, 261, 114394.

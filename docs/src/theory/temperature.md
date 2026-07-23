@@ -68,15 +68,21 @@ The models above describe the long-term (Eskilson-type) response. For the first 
 borehole geometry, thermal capacity and vertical fluid advection dominate, and a dedicated
 short-term transfer function is required. [`outlet_transfer_function`](@ref) builds the complete
 dimensionless transfer function of the borehole **outlet** temperature (``T_{out}``, i.e. the
-source-side entering water temperature) from minutes to decades by joining the artificial neural
-network of Pasquier, Zarrella & Labib (2018) — [`short_term_response`](@ref) / [`short_term_nodes`](@ref)
-— to any long-term `AbstractGroundModel`. The long-term borehole-wall
-response is converted to an outlet transfer function through the effective borehole resistance
-``R_b^*`` and shifted to meet the short-term curve at the 7-day contact time:
+source-side entering water temperature) from minutes to decades by joining a trained short-term
+ANN — [`short_term_response`](@ref) / [`short_term_nodes`](@ref), either the wider-range
+[`DeepANN`](@ref) (Pasquier & Marcotte, 2020; the **default**, 21-day horizon) or the original
+[`PublishedANN`](@ref) (Pasquier, Zarrella & Labib, 2018; 7-day horizon) — to any long-term
+`AbstractGroundModel`. The long-term borehole-wall response ``\tilde g`` [°C·m/W] is converted to an
+outlet transfer function through the effective borehole resistance ``R_b^*`` and shifted to meet
+the short-term curve at the model's contact time (7 or 21 days):
 
 ```math
-\bar g = \left(\frac{\tilde g}{2\pi k_s} + R_b^*\right)\frac{\dot V\,C_f}{H}.
+\bar g = \left(N_b\,\tilde g + R_b^*\right)\frac{\dot V\,C_f}{H},
 ```
+
+where ``N_b`` rescales a borefield's field-average response (normalised by `GroundResponse.jl` to
+1 W/m of *total* field load) back to the per-borehole basis the ANN uses (``N_b = 1`` for a single
+borehole).
 
 ```julia
 Rbₑ   = resistance_ULoop_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)

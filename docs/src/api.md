@@ -27,9 +27,12 @@ Modules = [GroundHeatExchanger]
 ### Short-term ANN model
 
 - [`short_term_response`](@ref) — ANN-based short-term outlet transfer function
-  (Pasquier, Zarrella & Labib, 2018)
-- [`short_term_nodes`](@ref) — raw ANN transfer function on its 85 native time nodes (the
-  building block behind `short_term_response` and `outlet_transfer_function`)
+- [`short_term_nodes`](@ref) — raw ANN transfer function on its native time nodes (the building
+  block behind `short_term_response` and `outlet_transfer_function`)
+- [`AbstractANN`](@ref) — model tag selecting which trained network to evaluate
+  - [`DeepANN`](@ref) — Pasquier & Marcotte (2020); wider validity ranges, 95 nodes, 21-day
+    horizon; **the default** for `outlet_transfer_function`
+  - [`PublishedANN`](@ref) — Pasquier, Zarrella & Labib (2018); 85 nodes, 7-day horizon
 
 ### Ground response and compression
 

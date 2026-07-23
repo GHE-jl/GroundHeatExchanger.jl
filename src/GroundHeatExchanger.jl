@@ -11,10 +11,10 @@ using GroundResponse: AbstractGroundModel, ILSModel, ICSModel, FLSModel, MILSMod
 # Utilities (pchip_interpolation, GHE, ground_load_profile)
 include("utils.jl")
 
-# Short-term ANN (Pasquier, Zarrella & Labib, 2018) — `short_term_response`/`short_term_nodes`.
-# Native to this package: it models the combined borehole + ground outlet response, not a pure
-# ground kernel, so it lives here rather than in GroundResponse.jl.
-include("short_term_ann.jl")
+# Artificial neural network (abstraction, then one file per concrete model)
+include("ann_model.jl")
+include("ann_published.jl")
+include("ann_deep.jl")
 
 # Temporal superposition (FFT-based convolution)
 include("temporal_superposition.jl")
@@ -29,7 +29,11 @@ export convolution, convolutionf, impulse_func, convolution_ns!,
 # Temperature simulation
 export fluid_temperature, outlet_temperature, inlet_temperature, outlet_transfer_function
 
-# Short-term ANN (Pasquier, Zarrella & Labib, 2018)
+# Short-term ANN model dispatch and models
+export AbstractANN, PublishedANN, DeepANN
+
+# Short-term ANN (Pasquier, Zarrella & Labib, 2018 — `PublishedANN`; Pasquier & Marcotte, 2020 —
+# `DeepANN`, the default)
 export short_term_response, short_term_nodes
 
 # Interpolation utilities

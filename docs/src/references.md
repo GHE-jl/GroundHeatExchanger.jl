@@ -28,7 +28,14 @@ The methods implemented in this package are drawn from the following sources.
 - **Pasquier, P., Zarrella, A., & Labib, R.** (2018). Application of artificial neural networks to
   near-instant construction of short-term g-functions. *Applied Thermal Engineering*, 143, 910–921.
   <https://doi.org/10.1016/j.applthermaleng.2018.07.137>
-  The short-term ANN model behind [`short_term_response`](@ref) and [`short_term_nodes`](@ref).
+  The [`PublishedANN`](@ref) model behind [`short_term_response`](@ref) and
+  [`short_term_nodes`](@ref).
+
+- **Pasquier, P., & Marcotte, D.** (2020). Robust identification of volumetric heat capacity and
+  analysis of thermal response tests by Bayesian inference with correlated residuals. *Applied
+  Energy*, 261, 114394. <https://doi.org/10.1016/j.apenergy.2019.114394>
+  The [`DeepANN`](@ref) model (wider validity ranges, the default) behind
+  [`short_term_response`](@ref) and [`short_term_nodes`](@ref).
 
 - **Dusseault, B., Pasquier, P., & Marcotte, D.** (2018). A block matrix formulation for efficient
   g-function construction. *Renewable Energy*, 121, 249–260.

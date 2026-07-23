@@ -723,26 +723,64 @@ using GroundHeatExchanger
         ]
         references = [g_raw_1m, g_raw_2m, g_raw_3m, g_raw_4m, g_raw_5m]
 
+        # Explicitly tagged `PublishedANN()` throughout: this testset validates the 2018 net
+        # specifically against its MATLAB reference, and bare (no-model-tag) calls now default to
+        # `DeepANN()` (see `DeepANN`'s docstring in ann_model.jl).
         @testset "Case $i vs MATLAB reference" for (i, (p, ref)) in enumerate(zip(datasets, references))
-            _, g_raw = short_term_nodes(p...)
+            _, g_raw = short_term_nodes(PublishedANN(), p...)
             @test length(g_raw) == 85
             @test isapprox(g_raw, ref)
         end
 
         @testset "short_term_response matches short_term_nodes at the native ANN times" begin
             ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s = datasets[3]
-            ts_nodes, g_nodes = short_term_nodes(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s)
-            _, g_req = short_term_response(collect(Float64, ts_nodes), rb, ri, ro, H, s, V̇,
-                ks, Cs, kg, Cg, kp, Cp, Cf)
+            ts_nodes, g_nodes = short_term_nodes(PublishedANN(), ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro,
+                rb, H, V̇, s)
+            _, g_req = short_term_response(PublishedANN(), collect(Float64, ts_nodes), rb, ri, ro,
+                H, s, V̇, ks, Cs, kg, Cg, kp, Cp, Cf)
             @test isapprox(g_req, g_nodes)
         end
 
         @testset "clamp policy on out-of-range inputs" begin
             ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s = datasets[3]
-            @test_throws ArgumentError short_term_response(3600.0, rb, ri, ro, H, s, V̇, 100.0, Cs,
-                kg, Cg, kp, Cp, Cf; clamp = false)
-            _, g_clamped = short_term_response(3600.0, rb, ri, ro, H, s, V̇, 100.0, Cs, kg, Cg, kp,
-                Cp, Cf; clamp = true)
+            @test_throws ArgumentError short_term_response(PublishedANN(), 3600.0, rb, ri, ro, H, s,
+                V̇, 100.0, Cs, kg, Cg, kp, Cp, Cf; clamp = false)
+            _, g_clamped = short_term_response(PublishedANN(), 3600.0, rb, ri, ro, H, s, V̇, 100.0,
+                Cs, kg, Cg, kp, Cp, Cf; clamp = true)
+            @test isfinite(g_clamped)
+        end
+    end
+
+    # short_term_ann — Pasquier & Marcotte (2020), DeepANN (the default short-term model for
+    # `outlet_transfer_function`). Numerical parity against the MATLAB reference
+    # (SULoop_TRCMz_ANN.m) is checked in script/script_ann_validation.jl (plotted against the 5
+    # validation cases); these are structural/sanity checks only (right node count/horizon, finite
+    # output, clamp policy), on an arbitrary case not tied to that reference data.
+    @testset "short_term_ann (Pasquier & Marcotte, 2020) — DeepANN structural checks" begin
+        ks, Cs, kg, Cg, kp, Cp, Cf = 2.5, 2.2e6, 1.5, 2.2e6, 0.4, 1.9e6, 4.2e6
+        ri, ro, rb, H, V̇, s = 0.017, 0.022, 0.07, 150.0, 4.0e-4, 0.06
+
+        @testset "95 nodes, 21-day horizon, finite output" begin
+            ts, g = short_term_nodes(DeepANN(), ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s)
+            @test length(ts) == 95
+            @test ts[end] == 21 * 24 * 3600
+            @test all(isfinite, g)
+            @test all(g .>= 0)
+        end
+
+        @testset "short_term_response matches short_term_nodes at the native ANN times" begin
+            ts_nodes, g_nodes = short_term_nodes(DeepANN(), ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb,
+                H, V̇, s)
+            _, g_req = short_term_response(DeepANN(), collect(Float64, ts_nodes), rb, ri, ro, H, s,
+                V̇, ks, Cs, kg, Cg, kp, Cp, Cf)
+            @test isapprox(g_req, g_nodes)
+        end
+
+        @testset "clamp policy on out-of-range inputs" begin
+            @test_throws ArgumentError short_term_response(DeepANN(), 3600.0, rb, ri, ro, H, s, V̇,
+                100.0, Cs, kg, Cg, kp, Cp, Cf; clamp = false)
+            _, g_clamped = short_term_response(DeepANN(), 3600.0, rb, ri, ro, H, s, V̇, 100.0, Cs,
+                kg, Cg, kp, Cp, Cf; clamp = true)
             @test isfinite(g_clamped)
         end
     end

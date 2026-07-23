@@ -116,3 +116,6 @@ julia --project=script/ "script/script_temperature simulation.jl"
 | `script_temperature simulation.jl` | Full pipeline: FLS g → ``R_b^*`` → ``T_f`` / ``T_{in}`` / ``T_{out}``, 1-year hourly. |
 | `script_temporal_superposition_stationary.jl` | FFT convolution with an FLS g-function over a 6-day load. |
 | `script_temporal_superposition_nonstationary.jl` | Non-stationary convolution across three operating states. |
+| `script_outlet_transfer_function.jl` | Short- + long-term outlet transfer function: Pasquier et al. (2018) Figs. 2a/3, plus a `PublishedANN` vs `DeepANN` borefield comparison. |
+| `script_ann_validation.jl` | `PublishedANN` and `DeepANN` plotted against their MATLAB references at native nodes, with the interpolated `short_term_response` overlaid. |
+| `script_validation_Lamarche2023.jl` | `@test`-based validation of g-functions, resistances and fluid properties against Lamarche's textbook examples. |

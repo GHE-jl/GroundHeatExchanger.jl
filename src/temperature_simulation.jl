@@ -105,27 +105,23 @@ end
 
 """
     outlet_transfer_function(t, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s, Rbₑ, m;
-                             xy=[0.0 0.0], clamp=true, interp=false)
+                             xy=[0.0 0.0], clamp=true, interp=false, model=DeepANN())
 
 Complete dimensionless transfer function of the borehole-**outlet** fluid temperature (`T_out`,
-i.e. the entering water temperature on the heat-pump source side), spanning minutes to decades.
-It joins the short-term ANN transfer function of Pasquier et al. (2018) to a long-term ground
-model `m`:
-  1. the short-term is `short_term_response` on its 7-day validity horizon;
-  2. the long-term is the borehole-wall temperature response of `m` (already in [°C·m/W] per
-     1 W/m — the `1/2πkₛ` conductivity scaling is baked into `ground_response`), converted to a
-     dimensionless outlet transfer function through the effective borehole resistance `Rbₑ`
-     (Eq. 9 of the paper), `ḡ = (nb·g_wall + Rbₑ) · (V̇·Cf / H)`;
-  3. the long-term curve is shifted vertically to meet the short-term curve at the 7-day
-     contact time, then the two halves are spliced.
-`m` may be any `AbstractGroundModel`; spatial superposition (`successive_flux`) is applied
+i.e. the entering water temperature on the source (ground) side), spanning minutes to decades.
+It joins a short-term ANN transfer function to a long-term ground model `m`:
+  1. the short-term is `short_term_response(model, ...)` on its native validity horizon (21 days /
+     95 nodes for the default `DeepANN`; 7 days / 85 nodes for `PublishedANN`);
+  2. the long-term is the borehole-wall temperature response of `m` [°C·m/W];
+  3. the long-term curve is shifted vertically to meet the short-term curve at the contact
+     time, then the two halves are spliced.
+`m` may be any `AbstractGroundModel`, spatial superposition (`successive_flux`) is applied
 automatically when `xy` describes more than one borehole (in which case the result is the
 field-average outlet transfer function under the equal-inlet-temperature assumption).
 For a borefield, `ground_response` returns the field-average wall response normalised to 1 W/m of
 *total* field heat rate (flux constraint `Σqᵢ = 1`), i.e. `1/nb` of the per-borehole response,
 whereas the short-term ANN transfer function is per single borehole. The `nb` factor above rescales
-the ground response back to a per-borehole basis so both halves join with a matching slope; without
-it the long-term slope is `1/nb` too shallow and the junction kinks (`nb = 1` makes this a no-op).
+the ground response back to a per-borehole basis so both halves join with a matching slope.
 The impulse of the outlet transfer function is of 1 °C (as opposed to 1 W/m for the models in
 GroundResponse.jl).
 # Arguments
@@ -140,6 +136,7 @@ GroundResponse.jl).
     - `clamp`: out-of-range handling for the ANN inputs (see `short_term_response`)
     - `interp`: enable GroundResponse's sub-sampling + PCHIP interpolation for the long-term
       evaluation; `false` evaluates exactly at every `t` (default `false`)
+    - `model`: short-term ANN to join, [`DeepANN`](@ref) (default) or [`PublishedANN`](@ref)
 # Output
     - `g`: Dimensionless outlet transfer function at `t` [-] (add `1` for the inlet transfer
         function)
@@ -147,28 +144,25 @@ GroundResponse.jl).
     - Pasquier, P., Zarrella, A., & Labib, R. (2018). Application of artificial neural networks
         to near-instant construction of short-term g-functions. Applied Thermal Engineering,
         143, 910–921.
+    - Pasquier, P., & Marcotte, D. (2020). Robust identification of volumetric heat capacity and
+        analysis of thermal response tests by Bayesian inference with correlated residuals.
+        Applied Energy, 261, 114394. https://doi.org/10.1016/j.apenergy.2019.114394
 """
 function outlet_transfer_function(t::AbstractVector{<:Real}, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb,
     H, V̇, s, Rbₑ, m::AbstractGroundModel;
     xy::AbstractMatrix{<:Real} = reshape([0.0, 0.0], 1, 2), clamp::Bool = true,
-    interp::Bool = false)
+    interp::Bool = false, model::AbstractANN = DeepANN())
 
     tv = collect(Float64, t)
 
-    # Short-term: ANN transfer function on its 85 native nodes; the last node is the
-    # short-/long-term contact time (7 days).
-    ts_nodes, g_nodes = short_term_nodes(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro,
+    ts_nodes, g_nodes = short_term_nodes(model, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro,
         rb, H, V̇, s; clamp = clamp)
     ts_nodes = Float64.(ts_nodes)
-    tc = ts_nodes[end]                            # short-/long-term contact time (7 days)
+    tc = ts_nodes[end]                            # short-/long-term contact time (model-dependent)
     short = tv .<= tc
     g_short = any(short) ? pchip_interpolation(ts_nodes, g_nodes, tv[short]) : Float64[]
     g_st_contact = g_nodes[end]                   # short-term value at tc (== last node)
 
-    # Long-term: field-average wall response → dimensionless outlet g (Eq. 9). `ground_response`
-    # already carries the 1/2πkₛ scaling, but for a borefield it is normalised to 1 W/m of *total*
-    # field heat rate (1/nb of the per-borehole response); the short-term ANN half is per single
-    # borehole, so we rescale by nb to join them on the same per-borehole basis (nb = 1 is a no-op).
     nb = size(xy, 1)
     to_outlet(gw) = (nb .* gw .+ Rbₑ) .* (V̇ * Cf / H)
     # Prepend tc so the first evaluated value provides the continuity shift.

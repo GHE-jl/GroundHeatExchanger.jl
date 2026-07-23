@@ -13,7 +13,7 @@ const _ST_NODES = [
 ]
 
 """
-    short_term_response(t, rb, ri, ro, H, s, V̇, ks, Cs, kg, Cg, kp, Cp, Cf; clamp=true)
+    short_term_response(::PublishedANN, t, rb, ri, ro, H, s, V̇, ks, Cs, kg, Cg, kp, Cp, Cf; clamp=true)
 
 Short-term transfer function of the borehole-**outlet** fluid temperature (`T_out`, i.e. the
 entering water temperature on the heat-pump source side), constructed with the artificial
@@ -65,11 +65,11 @@ minutes-to-decades response.
         to near-instant construction of short-term g-functions. Applied Thermal Engineering,
         143, 910–921. https://doi.org/10.1016/j.applthermaleng.2018.07.137
 """
-function short_term_response(t, rb, ri, ro, H, s, V̇, ks, Cs, kg, Cg, kp, Cp, Cf;
+function short_term_response(::PublishedANN, t, rb, ri, ro, H, s, V̇, ks, Cs, kg, Cg, kp, Cp, Cf;
     clamp::Bool = true)
 
     # Native ANN transfer function on the 85 fixed nodes
-    _, g_nodes = short_term_nodes(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s;
+    _, g_nodes = short_term_nodes(PublishedANN(), ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s;
         clamp = clamp)
 
     # Validate the requested time(s); only the horizon (last value) is bounded by the ANN.
@@ -83,18 +83,20 @@ function short_term_response(t, rb, ri, ro, H, s, V̇, ks, Cs, kg, Cg, kp, Cp, C
 end
 
 """
-    short_term_nodes(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s; clamp=true)
+    short_term_nodes(::PublishedANN, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s; clamp=true)
 
-Evaluate the ANN on its 85 fixed native time nodes, returning `(ts, g)` where `ts` are the node
-times [s] — geometric, with the last node at 604800 s = 7-day horizon — and `g` is the raw short-term
-transfer function on those nodes — no interpolation and no time validation, unlike
-`short_term_response`. This is the low-level building block: `short_term_response` adds PCHIP
-interpolation onto arbitrary `t`, and the short-/long-term join [`outlet_transfer_function`](@ref)
-consumes the raw nodes directly (it splices at `ts[end]` and does its own interpolation). Inverts
-the training transformation `y = ln(t̃ / (g + 1))`. See
-`short_term_response` for the argument list and ANN validity ranges.
+Evaluate the ANN on its fixed native time nodes, returning `(ts, g)` where `ts` are the node
+times [s] — geometric, with the last node marking the short-term validity horizon — and `g` is
+the raw short-term transfer function on those nodes — no interpolation and no time validation,
+unlike `short_term_response`. This is the low-level building block: `short_term_response` adds
+PCHIP interpolation onto arbitrary `t`, and the short-/long-term join
+[`outlet_transfer_function`](@ref) consumes the raw nodes directly (it splices at `ts[end]` and
+does its own interpolation).
+Inverts the training transformation `y = ln(t̃ / (g + 1))` (85 nodes). See
+`short_term_nodes(::DeepANN, ...)` in `ann_deep.jl` for the wider-range 95-node/21-day model.
 """
-function short_term_nodes(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s; clamp::Bool = true)
+function short_term_nodes(::PublishedANN, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s;
+    clamp::Bool = true)
     p = _input_validation(ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s; clamp = clamp)
     g = 1 ./ (exp.(_ann_forward(p)) ./ _ST_NODES) .- 1
     g[g.<0] .= 0
@@ -206,40 +208,6 @@ function _ann_forward(x1)
     # Output inverse scaling
     y1 = _mapminmax_reverse(a3, _output_scaler)
     return y1
-end
-
-"""
-    _mapminmax_apply(x, scaler)
-
-Forward min–max scaling (MATLAB `mapminmax_apply`): `y = (x - xoffset) * gain + ymin`. First
-step of the network simulation.
-"""
-function _mapminmax_apply(x, scaler)
-    y = x .- scaler.xoffset
-    y .*= scaler.gain
-    y .+= scaler.ymin
-    return y
-end
-
-"""
-    _mapminmax_reverse(y, scaler)
-
-Inverse min–max scaling (MATLAB `mapminmax_reverse`): `x = (y - ymin) / gain + xoffset`. Last
-step of the network simulation.
-"""
-function _mapminmax_reverse(y, scaler)
-    x = y .- scaler.ymin
-    x ./= scaler.gain
-    x .+= scaler.xoffset
-    return x
-end
-
-# Min–max scaler holding the offset, gain and target minimum used to normalise the network
-# input and de-normalise its output.
-struct _MinMaxScaler
-    xoffset::Vector{Float64}
-    gain::Vector{Float64}
-    ymin::Int8
 end
 
 # Input 1
