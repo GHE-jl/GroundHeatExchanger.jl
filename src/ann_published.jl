@@ -1,5 +1,3 @@
-using PCHIPInterpolation
-
 # The 85 geometric time nodes [s] on which the ANN reproduces the transfer function. They are
 # fixed by the training procedure (Pasquier et al., 2018); the last node (604800 s = 7 days)
 # marks the short-term validity horizon.
@@ -76,8 +74,7 @@ function short_term_response(::PublishedANN, t, rb, ri, ro, H, s, V̇, ks, Cs, k
     t = _validate_time(t; clamp = clamp)
 
     # Shape-preserving (PCHIP) interpolation onto the requested time(s).
-    itp = Interpolator(_ST_NODES, g_nodes)
-    g = itp.(t)
+    g = pchip_interpolation(_ST_NODES, g_nodes, t)
 
     return t, g
 end

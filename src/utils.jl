@@ -5,12 +5,12 @@ Function that performs the complete interpolation of a vector using the PCHIP in
 # Arguments
     - `tᵢ`: The id on which to interpolate
     - `vᵢ`: The vector to interpolate, sampled at `tᵢ`
-    - `t`: The new interpolated vector sample
+    - `t`: The new interpolated sample(s), a scalar or a vector
 # Output
-    - `v`: The new interpolated vector
+    - `v`: The new interpolated value(s)
 """
 function pchip_interpolation(tᵢ::AbstractVector{<:Real}, vᵢ::AbstractVector{<:Real},
-    t::AbstractVector{<:Real})
+    t::Union{Real, AbstractVector{<:Real}})
     interp = Interpolator(tᵢ, vᵢ)
     v = interp.(t)
     return v
