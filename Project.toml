@@ -10,10 +10,8 @@ BoreholeResistance = "e68eaff3-538a-4178-bf62-7dbf06caf399"
 GroundResponse = "4e068bfd-c84d-4e7d-af33-179ff9550968"
 
 [sources]
-# IF USING UNIX, REPLACE BY {path = "../BoreholeResistance.jl"}
-BoreholeResistance = {path = "..\\BoreholeResistance.jl"}
-# IF USING UNIX, REPLACE BY {path = "../GroundResponse.jl"}
-GroundResponse = {path = "..\\GroundResponse.jl"}
+BoreholeResistance = {path = "../BoreholeResistance.jl"}
+GroundResponse = {path = "../GroundResponse.jl"}
 
 [compat]
 DSP = "0.8"
