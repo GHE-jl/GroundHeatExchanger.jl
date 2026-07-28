@@ -151,23 +151,24 @@ using GroundHeatExchanger
 
     @testset "fluid_temperature" begin
         # Zero load → Tf = T0 everywhere
-        @test fluid_temperature(t_sim, zeros(n_sim), g_sim, T0, ks, Rb) ≈ fill(T0, n_sim)
+        @test fluid_temperature(t_sim, zeros(n_sim), g_sim, T0, Rb) ≈ fill(T0, n_sim)
 
         # Zero g → Tf = T0 + q·Rb (no ground conduction)
-        @test fluid_temperature(t_sim, q_sim, zeros(n_sim), T0, ks, Rb) ≈ T0 .+ q_sim .* Rb
+        @test fluid_temperature(t_sim, q_sim, zeros(n_sim), T0, Rb) ≈ T0 .+ q_sim .* Rb
 
-        # h-formulation equivalence: T0 + conv(q, Rb + g/(2π·ks)) == fluid_temperature
-        h_nom = Rb .+ g_sim ./ (2π * ks)
-        @test T0 .+ convolution(q_sim, h_nom) ≈ fluid_temperature(t_sim, q_sim, g_sim, T0, ks, Rb)
+        # h-formulation equivalence: T0 + conv(q, Rb + g) == fluid_temperature
+        # (g already carries the conductivity normalisation, see ground_response)
+        h_nom = Rb .+ g_sim
+        @test T0 .+ convolution(q_sim, h_nom) ≈ fluid_temperature(t_sim, q_sim, g_sim, T0, Rb)
 
         # All overloads agree
-        Tf_g = fluid_temperature(t_sim, q_sim, g_sim, T0, ks, Rb)
-        Tf_m = fluid_temperature(t_sim, q_sim, model, rb, T0, ks, Rb)
+        Tf_g = fluid_temperature(t_sim, q_sim, g_sim, T0, Rb)
+        Tf_m = fluid_temperature(t_sim, q_sim, model, rb, T0, Rb)
         @test Tf_g ≈ Tf_m
     end
 
     @testset "outlet and inlet temperature" begin
-        Tf_sim = fluid_temperature(t_sim, q_sim, g_sim, T0, ks, Rb)
+        Tf_sim = fluid_temperature(t_sim, q_sim, g_sim, T0, Rb)
         Tout   = outlet_temperature(Tf_sim, Q_sim, V, Cf)
         Tin    = inlet_temperature(Tf_sim, Q_sim, V, Cf)
 

@@ -6,7 +6,7 @@
 #   so the system's transfer function is no longer a single fixed curve — it switches between
 #   states. We capture this with one combined transfer function per flow state, for an impulse of
 #   1 W/m:
-#       h_s(t) = Rbₑ(V_s) + g(t) / (2π·ks)
+#       h_s(t) = Rbₑ(V_s) + g(t)
 #   and the mean fluid temperature follows from a single non-stationary convolution:
 #       Tf(t) = T0 + (f * h)(t)
 #   where f segregates the incremental heat load by the state active at each time step.
@@ -51,18 +51,18 @@ Rbₑ = [resistance_ULoop_effective(Vi, H, s, rb, ro, ri, ks, kg, kp, kf, Cf/ρf
        for Vi in V_states]
 println("Rbₑ states [m·K/W]:       ", round.(Rbₑ, digits=4))
 
-# Combined transfer function per state: h_s(t) = Rbₑ(V_s) + g(t)/(2π·ks)
-h = hcat([Rbₑ[i] .+ g ./ (2π * ks) for i in 1:n_states]...)
+# Combined transfer function per state: h_s(t) = Rbₑ(V_s) + g(t)
+h = hcat([Rbₑ[i] .+ g for i in 1:n_states]...)
 
 # Non-stationary mean fluid temperature: Tf(t) = T0 + (f * h)(t)
 Tf = T0 .+ convolution_ns(q, h, state_vec)
 
 # Stationary reference: same load, but the flow rate stays at nominal for the whole simulation
-h_nom  = Rbₑ[1] .+ g ./ (2π * ks)
+h_nom  = Rbₑ[1] .+ g
 Tf_nom = T0 .+ convolution(q, h_nom)
 
 # Sanity check: the h-formulation must reproduce fluid_temperature() in the stationary case
-@assert Tf_nom ≈ fluid_temperature(t, q, g, T0, ks, Rbₑ[1])  "h-formulation must match fluid_temperature"
+@assert Tf_nom ≈ fluid_temperature(t, q, g, T0, Rbₑ[1])  "h-formulation must match fluid_temperature"
 
 # Figure
 fig = Figure(size = (1000, 700))

@@ -40,7 +40,7 @@ model = FLSModel(H, D, ks, Cs)
 Q = ground_load_profile(t ./ 3600)      # [W], sinusoidal annual profile
 
 # Full simulation — g-function computed and PCHIP-compressed automatically
-Tf   = fluid_temperature(t, Q ./ H, model, rb, T0, ks, Rb)
+Tf   = fluid_temperature(t, Q ./ H, model, rb, T0, Rb)
 Tout = outlet_temperature(Tf, Q, V, Cf)
 Tin  = inlet_temperature(Tf, Q, V, Cf)
 ```
@@ -49,7 +49,7 @@ Tin  = inlet_temperature(Tf, Q, V, Cf)
 
 The mean fluid temperature follows:
 ```
-Tf(t) = T0 + q(t)·Rb + (f★g)(t) / (2π·ks)
+Tf(t) = T0 + q(t)·Rb + (f★g)(t)
 ```
 where `f★g` is the discrete convolution (temporal superposition) solved in O(n log n) via FFT.
 
@@ -72,11 +72,11 @@ Tin  = Tf + Q / (2·V·Cf)
 
 ```julia
 # With pre-computed g-function vector
-fluid_temperature(t, q, g, T0, ks, Rb)              # q in W/m
+fluid_temperature(t, q, g, T0, Rb)              # q in W/m
 
 # With ground model (g computed + PCHIP-compressed automatically)
-fluid_temperature(t, q, m, rb, T0, ks, Rb; interp=true)       # single borehole
-fluid_temperature(t, q, m, rb, xy, T0, ks, Rb; interp=true)   # borefield (xy: nb×2 matrix)
+fluid_temperature(t, q, m, rb, T0, Rb; interp=true)       # single borehole
+fluid_temperature(t, q, m, rb, xy, T0, Rb; interp=true)   # borefield (xy: nb×2 matrix)
 ```
 
 The load is always the heat load **per unit length** `q` [W/m]. Convert a total load `Q` [W]

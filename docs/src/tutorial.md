@@ -45,10 +45,10 @@ Q     = ground_load_profile(t ./ 3600)      # [W]
 geometry and the resistance — the g-function is computed and PCHIP-compressed automatically:
 
 ```julia
-Tf = fluid_temperature(t, Q ./ H, model, rb, T0, ks, Rb)
+Tf = fluid_temperature(t, Q ./ H, model, rb, T0, Rb)
 ```
 
-Under the hood this evaluates ``T_f = T_0 + q\,R_b^* + (q \star g)/(2\pi k_s)`` — see
+Under the hood this evaluates ``T_f = T_0 + q\,R_b^* + (q \star g)`` — see
 [Simulation pipeline](@ref).
 
 ## 5. Outlet and inlet temperatures
@@ -70,7 +70,7 @@ spatial superposition is applied inside `ground_response`:
 
 ```julia
 xy = borefield(:rectangle, 3, 4, 6.0)     # 3×4 grid, 6 m spacing
-Tf = fluid_temperature(t, Q ./ (H * size(xy, 1)), model, rb, xy, T0, ks, Rb)
+Tf = fluid_temperature(t, Q ./ (H * size(xy, 1)), model, rb, xy, T0, Rb)
 ```
 
 ## 7. Controlling g-function compression
@@ -79,7 +79,7 @@ The `interp` keyword controls PCHIP compression. The default (`true`) is accurat
 set `interp=false` to evaluate the g-function exactly at every step (slower, for reference):
 
 ```julia
-Tf_exact = fluid_temperature(t, Q ./ H, model, rb, T0, ks, Rb; interp=false)
+Tf_exact = fluid_temperature(t, Q ./ H, model, rb, T0, Rb; interp=false)
 ```
 
 See [g-function compression](@ref).

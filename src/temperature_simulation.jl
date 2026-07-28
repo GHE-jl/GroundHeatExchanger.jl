@@ -1,24 +1,23 @@
 """
-    fluid_temperature(t, q, g, T0, ks, Rbₑ)
-    fluid_temperature(t, q, m, rb, T0, ks, Rbₑ; interp=true)
-    fluid_temperature(t, q, m, rb, xy, T0, ks, Rbₑ; interp=true)
+    fluid_temperature(t, q, g, T0, Rbₑ)
+    fluid_temperature(t, q, m, rb, T0, Rbₑ; interp=true)
+    fluid_temperature(t, q, m, rb, xy, T0, Rbₑ; interp=true)
 
 Compute the mean fluid temperature at the borehole mid-depth:
-`Tf(t) = T0 + q(t)·Rbₑ + (q*g)(t) / (2π·ks)`
+`Tf(t) = T0 + q(t)·Rbₑ + (q*g)(t)`
 where q*g is the temporal superposition (FFT convolution) of the incremental heat load with the
-g-function. When called with a ground model, `GroundResponse.ground_response` is invoked internally
+g-function (`g` already carries the conductivity normalisation, see `GroundResponse.ground_response`).
+When called with a ground model, `GroundResponse.ground_response` is invoked internally
 with `interp`, pass `interp=false` to evaluate the g-function exactly at every `t` (valid only for
 a uniformly spaced `t` with the temporal solvers).
 The load is always supplied as a heat load per unit length `q` [W/m]. If you have a total heat
 load `Q` [W], divide it by the **entire** borehole length (`L = H · nb. boreholes`) beforehand:
-`q = Q / L`. This is intentionally left to the caller to avoid the common confusion of dividing
-`Q` by a single borehole depth `H` rather than by the full field length.
+`q = Q / L`.
 # Arguments
     - `t`: Time vector [s]
     - `q`: Heat load per unit length q = Q/L [W/m] (`L` is the total borehole length)
     - `g`: Pre-computed g-function [°C·m/W] — from `ground_response`
     - `T0`: Undisturbed ground temperature [°C]
-    - `ks`: Ground thermal conductivity [W/m·K]
     - `Rbₑ`: Effective borehole thermal resistance [m·K/W]
     - `m`: Ground model (`FLSModel`, `ILSModel`, `MFLSModel`, etc.)
     - `rb`: Borehole radius [m]
@@ -33,22 +32,22 @@ load `Q` [W], divide it by the **entire** borehole length (`L = H · nb. borehol
         910–921.
 """
 function fluid_temperature(t::AbstractVector{<:Real}, q::AbstractVector{<:Real},
-    g::AbstractVector{<:Real}, T0::Real, ks::Real, Rbₑ::Real)
+    g::AbstractVector{<:Real}, T0::Real, Rbₑ::Real)
     length(q) == length(t) && length(g) == length(t) ||
         throw(ArgumentError("Length of q and g must match length of t"))
-    return T0 .+ q .* Rbₑ .+ convolution(q, g) / (2 * π * ks)
+    return T0 .+ q .* Rbₑ .+ convolution(q, g)
 end
 function fluid_temperature(t::AbstractVector{<:Real}, q::AbstractVector{<:Real},
-    m::AbstractGroundModel, rb::Real, T0::Real, ks::Real, Rbₑ::Real; interp::Bool=true)
+    m::AbstractGroundModel, rb::Real, T0::Real, Rbₑ::Real; interp::Bool=true)
     xy = reshape([0.0, 0.0], 1, 2)
     g = ground_response(collect(Float64, t), rb, xy, m; interp=interp)
-    return fluid_temperature(t, q, g, T0, ks, Rbₑ)
+    return fluid_temperature(t, q, g, T0, Rbₑ)
 end
 function fluid_temperature(t::AbstractVector{<:Real}, q::AbstractVector{<:Real},
     m::AbstractGroundModel, rb::Real, xy::AbstractMatrix{<:Real},
-    T0::Real, ks::Real, Rbₑ::Real; interp::Bool=true)
+    T0::Real, Rbₑ::Real; interp::Bool=true)
     g = ground_response(collect(Float64, t), rb, xy, m; interp=interp)
-    return fluid_temperature(t, q, g, T0, ks, Rbₑ)
+    return fluid_temperature(t, q, g, T0, Rbₑ)
 end
 
 """

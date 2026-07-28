@@ -87,7 +87,7 @@ model = FLSModel(H, D, ks, Cs)
 Q     = ground_load_profile(t ./ 3600)      # [W], sinusoidal annual profile
 
 # Full simulation — g-function computed and PCHIP-compressed automatically
-Tf   = fluid_temperature(t, Q ./ H, model, rb, T0, ks, Rb)
+Tf   = fluid_temperature(t, Q ./ H, model, rb, T0, Rb)
 Tout = outlet_temperature(Tf, Q, V, Cf)
 Tin  = inlet_temperature(Tf, Q, V, Cf)
 ```

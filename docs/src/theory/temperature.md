@@ -9,7 +9,7 @@ sizing or control calculation actually consumes.
 [`fluid_temperature`](@ref) evaluates the master equation (see [Simulation pipeline](@ref)):
 
 ```math
-T_f(t) = T_0 + q(t)\,R_b^* + \frac{(q \star g)(t)}{2\pi k_s}.
+T_f(t) = T_0 + q(t)\,R_b^* + (q \star g)(t).
 ```
 
 The first term is the undisturbed ground temperature, the second the instantaneous resistance drop
@@ -20,11 +20,11 @@ The function comes in several overloads of increasing convenience:
 
 ```julia
 # With a pre-computed g-function vector
-fluid_temperature(t, q, g, T0, ks, Rb)          # q in W/m
+fluid_temperature(t, q, g, T0, Rb)          # q in W/m
 
 # With a ground model — g computed and PCHIP-compressed automatically
-fluid_temperature(t, q, m, rb, T0, ks, Rb;        interp=true)   # single borehole
-fluid_temperature(t, q, m, rb, xy, T0, ks, Rb;    interp=true)   # borefield (xy: nb×2)
+fluid_temperature(t, q, m, rb, T0, Rb;        interp=true)   # single borehole
+fluid_temperature(t, q, m, rb, xy, T0, Rb;    interp=true)   # borefield (xy: nb×2)
 ```
 
 The load is always supplied as the heat load **per unit length** `q` [W/m]. To use a total heat

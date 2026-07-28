@@ -24,7 +24,7 @@ Q = ground_load_profile(th)   # [W]
 q = Q ./ H                  # heat load per unit length [W/m]
 
 # Step 4: Mean fluid temperature (GroundHeatExchanger.jl)
-Tf = fluid_temperature(t, q, g, T0, ks, Rbₑ)
+Tf = fluid_temperature(t, q, g, T0, Rbₑ)
 
 # Step 5: Outlet and inlet temperatures
 Tout = outlet_temperature(Tf, Q, V, Cf)
