@@ -1,5 +1,10 @@
 # GroundHeatExchanger.jl
 
+[![CI](https://github.com/GHE-jl/GroundHeatExchanger.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/GHE-jl/GroundHeatExchanger.jl/actions/workflows/CI.yml)
+[![Docs: dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://GHE-jl.github.io/GroundHeatExchanger.jl/dev)
+[![Docs: stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://GHE-jl.github.io/GroundHeatExchanger.jl/stable)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 Julia package for the complete thermal simulation of ground heat exchangers (GHEs). Acts as
 the integration layer for a three-package ecosystem:
 
