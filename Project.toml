@@ -4,17 +4,20 @@ version = "1.0.0"
 authors = ["Gabriel-Dion <dion.gabriel100@gmail.com>"]
 
 [deps]
-DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
-PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
 BoreholeResistance = "e68eaff3-538a-4178-bf62-7dbf06caf399"
+DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 GroundResponse = "4e068bfd-c84d-4e7d-af33-179ff9550968"
+PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
 
-[sources]
-BoreholeResistance = {path = "../BoreholeResistance.jl"}
-GroundResponse = {path = "../GroundResponse.jl"}
+[sources.BoreholeResistance]
+path = "../BoreholeResistance.jl"
+
+[sources.GroundResponse]
+path = "../GroundResponse.jl"
 
 [compat]
 DSP = "0.8"
+GroundResponse = "1"
 PCHIPInterpolation = "0.2"
 julia = "1.11"
 
