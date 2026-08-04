@@ -97,6 +97,9 @@ fluid_temperature
 outlet_temperature
 inlet_temperature
 outlet_transfer_function
+AbstractANN
+DeepANN
+PublishedANN
 short_term_response
 short_term_nodes
 ```
