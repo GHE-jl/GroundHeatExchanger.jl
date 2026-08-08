@@ -48,19 +48,13 @@ On top of the two upstream packages, `GroundHeatExchanger.jl` provides:
 
 ## Installation
 
-The package and its two siblings are not yet registered. The most reliable setup is to clone all
-three side by side and develop them locally:
+`GroundHeatExchanger.jl` is registered in the General registry, along with its siblings
+`BoreholeResistance.jl` and `GroundResponse.jl`, so they all resolve automatically:
 
 ```julia
 using Pkg
-Pkg.develop(path = "../BoreholeResistance.jl")
-Pkg.develop(path = "../GroundResponse.jl")
-Pkg.develop(path = ".")           # GroundHeatExchanger.jl
-Pkg.instantiate()
+Pkg.add("GroundHeatExchanger")
 ```
-
-(`GroundHeatExchanger.jl` declares the two siblings as path `[sources]`, so developing it pulls in
-the matching local versions.)
 
 ## Quick start
 

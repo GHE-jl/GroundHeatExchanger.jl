@@ -167,13 +167,12 @@ Note: the temperature simulation script filename contains a space — quote it o
 
 ## Installation
 
-`BoreholeResistance.jl` and `GroundResponse.jl` are registered in the General registry, so they
-resolve automatically. `GroundHeatExchanger.jl` itself is not yet registered — install directly
-from GitHub:
+`GroundHeatExchanger.jl` is registered in the General registry, along with its dependencies
+`BoreholeResistance.jl` and `GroundResponse.jl`, so they all resolve automatically:
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/GHE-jl/GroundHeatExchanger.jl")
+Pkg.add("GroundHeatExchanger")
 ```
 
 ## Dependencies
