@@ -1,6 +1,6 @@
 name = "GroundHeatExchanger"
 uuid = "bd8f68b8-2a15-4d14-8bb6-4cefce65f0ac"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Gabriel-Dion <dion.gabriel100@gmail.com>"]
 
 [deps]
@@ -10,7 +10,7 @@ BoreholeResistance = "e68eaff3-538a-4178-bf62-7dbf06caf399"
 GroundResponse = "4e068bfd-c84d-4e7d-af33-179ff9550968"
 
 [compat]
-BoreholeResistance = "1"
+BoreholeResistance = "1.1"
 DSP = "0.8"
 GroundResponse = "1"
 PCHIPInterpolation = "0.2"

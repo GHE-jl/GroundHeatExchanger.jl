@@ -12,7 +12,7 @@ exchanger under a time-varying load.
 
 ```
  BoreholeResistance.jl                 GroundResponse.jl
-   water_k / cp / ρ / μ                  ILSModel, FLSModel, …
+   fluid_property                         ILSModel, FLSModel, …
    resistance_ULoop_effective        ground_response, successive_flux
               ↘                                  ↙
                    GroundHeatExchanger.jl
@@ -20,7 +20,7 @@ exchanger under a time-varying load.
    pchip_interpolation · ground_load_profile
 ```
 
-A single `using GroundHeatExchanger` re-exports the whole ecosystem, so the entire pipeline — water
+A single `using GroundHeatExchanger` re-exports the whole ecosystem, so the entire pipeline — fluid
 properties, resistances, ground models, superposition and temperatures — is available from one
 import.
 
@@ -70,7 +70,7 @@ T0, V               = 10.0, 30/6e4        # 10 °C undisturbed, 30 L/min flow
 t = collect(3600.0:3600:3600*24*365)
 
 # Fluid properties (re-exported from BoreholeResistance)
-kf = water_k(T0);  cf = water_cp(T0);  ρf = water_ρ(T0);  μf = water_μ(T0)
+kf, cf, ρf, μf = fluid_property(T0, :water)
 Cf = cf * ρf                              # volumetric specific heat [J/m³·K] for Tin/Tout
 
 # Effective borehole resistance (multipole method)
@@ -117,8 +117,8 @@ Tin  = inlet_temperature(Tf, Q, V, Cf)
     `resistance_ULoop_effective` takes the **mass-specific** heat ``c_f`` [J/kg·K] and
     the density ``\rho_f`` separately, while [`outlet_temperature`](@ref) and
     [`inlet_temperature`](@ref) take the **volumetric** specific heat
-    ``C_f = c_f\,\rho_f`` [J/m³·K]. Compute `Cf = water_cp(T) * water_ρ(T)` explicitly when crossing
-    that boundary.
+    ``C_f = c_f\,\rho_f`` [J/m³·K]. Compute `Cf = cf * ρf` (from `fluid_property(T, :water)`)
+    explicitly when crossing that boundary.
 
 ## Re-exported APIs
 
@@ -127,7 +127,7 @@ documentation lives in their own sites:
 
 | From | Re-exported symbols | Documentation |
 |---|---|---|
-| **BoreholeResistance.jl** | `water_k`/`cp`/`ρ`/`μ`, `Reynolds`, `Prandtl`, `Nusselt`, `resistance_*` | [docs](https://GHE-jl.github.io/BoreholeResistance.jl) |
+| **BoreholeResistance.jl** | `fluid_property`, `Reynolds`, `Prandtl`, `Nusselt`, `resistance_*` | [docs](https://GHE-jl.github.io/BoreholeResistance.jl) |
 | **GroundResponse.jl** | `ILSModel` … `MFLSModel`, `ils` … `mfls`, `ground_response`, `successive_flux`, `bloc_matrix`, `borefield*` | [docs](https://GHE-jl.github.io/GroundResponse.jl) |
 
 The pages here document only the symbols **defined in** `GroundHeatExchanger.jl`. The g-function

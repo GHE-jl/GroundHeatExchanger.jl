@@ -10,7 +10,7 @@ the integration layer for a three-package ecosystem:
 
 ```
 BoreholeResistance.jl          GroundResponse.jl
-  water_k/cp/ρ/μ                ILSModel, FLSModel, ...
+  fluid_property                ILSModel, FLSModel, ...
   resistance_ULoop_effective  ground_response, successive_flux
            ↘                            ↙
            GroundHeatExchanger.jl
@@ -34,7 +34,7 @@ T0, V               = 10.0, 30/6e4    # 10°C undisturbed, 30 L/min flow
 t = collect(3600.0:3600:3600*24*365)
 
 # Fluid properties (from BoreholeResistance)
-kf = water_k(T0);  cf = water_cp(T0);  ρf = water_ρ(T0);  μf = water_μ(T0)
+kf, cf, ρf, μf = fluid_property(T0, :water)
 Cf = cf * ρf       # volumetric specific heat [J/m³·K] for Tin/Tout
 
 # Borehole thermal resistance (Rb* from multipole method)
@@ -181,7 +181,7 @@ Pkg.add("GroundHeatExchanger")
 
 | Package | Used for |
 |---------|----------|
-| [BoreholeResistance.jl](https://github.com/GHE-jl/BoreholeResistance.jl) | Borehole and fluid thermal resistances, water properties |
+| [BoreholeResistance.jl](https://github.com/GHE-jl/BoreholeResistance.jl) | Borehole and fluid thermal resistances, fluid properties (`fluid_property`) |
 | [GroundResponse.jl](https://github.com/GHE-jl/GroundResponse.jl) | Ground thermal response models and borefield layouts |
 | [DSP.jl](https://github.com/JuliaDSP/DSP.jl) | `conv` / `conv!` for FFT-based temporal superposition |
 | [PCHIPInterpolation.jl](https://github.com/gerlero/PCHIPInterpolation.jl) | PCHIP g-function compression |

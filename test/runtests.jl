@@ -5,7 +5,7 @@ using GroundHeatExchanger
 
     # Shared fixture — GHE() provides realistic parameters; Rb is used as a scalar fixture.
     _, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, vD, V = GHE()
-    cf = water_cp(T0)
+    _, cf, _, _ = fluid_property(T0, :water)
     Rb = resistance_ULoop_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
 
     @testset "pchip_interpolation" begin
@@ -786,5 +786,7 @@ using GroundHeatExchanger
         end
     end
 
+    # Added validation from the book of Lamarche (2023)
+    include("validation_Lamarche2023.jl")
 
 end

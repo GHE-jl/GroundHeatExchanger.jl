@@ -65,7 +65,7 @@ D = 4.0
 # Effective borehole resistance Rb* (the paper's "equivalent" resistance), first-order
 # multipole, with water properties at a representative 10 °C.
 Tmean = 10.0
-kf = water_k(Tmean); cf = water_cp(Tmean); ρf = water_ρ(Tmean); μf = water_μ(Tmean)
+kf, cf, ρf, μf = fluid_property(Tmean, :water)
 Rbₑ = resistance_ULoop_effective(V̇, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)
 println("Effective borehole resistance Rb* = ", round(Rbₑ; sigdigits = 4), " m·K/W")
 

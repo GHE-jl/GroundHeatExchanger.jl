@@ -43,7 +43,7 @@ export pchip_interpolation
 export GHE, ground_load_profile
 
 # Re-exports from BoreholeResistance
-export water_k, water_cp, water_ρ, water_μ
+export fluid_property
 export Reynolds, Prandtl, Nusselt, Nusselt_annulus, convection_coefficient
 export friction_factor_Colebrook_White, friction_factor_Tkachenko_Mileikovskyi
 export resistance_fluid, resistance_pipe

@@ -18,12 +18,12 @@ t = collect(3600.0:3600:3600*24*365)    # 1 year, hourly [s]
 
 ## 2. Fluid properties and borehole resistance
 
-The water properties and the resistance functions are re-exported from `BoreholeResistance.jl`.
+`fluid_property` and the resistance functions are re-exported from `BoreholeResistance.jl`.
 Note the two heat-capacity conventions: ``c_f`` (mass-specific) for the resistance, ``C_f =
 c_f\,\rho_f`` (volumetric) for the inlet/outlet split.
 
 ```julia
-kf = water_k(T0);  cf = water_cp(T0);  ρf = water_ρ(T0);  μf = water_μ(T0)
+kf, cf, ρf, μf = fluid_property(T0, :water)
 Cf = cf * ρf                              # volumetric specific heat [J/m³·K]
 
 Rb = resistance_ULoop_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)

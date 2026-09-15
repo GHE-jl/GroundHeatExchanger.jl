@@ -55,3 +55,8 @@ The methods implemented in this package are drawn from the following sources.
 - **Javed, S., & Spitler, J.** (2017). Accuracy of borehole thermal resistance calculation methods
   for grouted single U-tube ground heat exchangers. *Applied Energy*, 187, 790–806.
   The effective borehole resistance ``R_b^*`` consumed from `BoreholeResistance.jl`.
+
+## Validation
+
+- **Lamarche, L.** (2023). Fundamentals of Geothermal Heat Pump Systems: Design and Application.
+  Springer Nature Switzerland. https://books.google.ca/books?id=3erMzwEACAAJ. The validations in `validation_Lamarche2023.jl`.

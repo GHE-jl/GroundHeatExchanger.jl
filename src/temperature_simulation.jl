@@ -61,7 +61,7 @@ Borehole outlet temperature from the mean fluid temperature: `Tout = Tf − Q/(2
     - `q`: Heat load per unit length [W/m]
     - `H`: Borehole depth [m]
     - `V`: Volumetric flow rate [m³/s]
-    - `C`: Fluid volumetric specific heat [J/m³·K] (`water_cp(T) * water_ρ(T)`)
+    - `C`: Fluid volumetric specific heat [J/m³·K] (`cp * ρ` from `fluid_property(T, :water)`)
 # Output
     - `Tout`: Outlet fluid temperature [°C]
 """
@@ -87,7 +87,7 @@ Borehole inlet temperature from the mean fluid temperature: `Tin = Tf + Q/(2·V�
     - `q`: Heat load per unit length [W/m]
     - `H`: Borehole depth [m]
     - `V`: Volumetric flow rate [m³/s]
-    - `C`: Fluid volumetric specific heat [J/m³·K] (`water_cp(T) * water_ρ(T)`)
+    - `C`: Fluid volumetric specific heat [J/m³·K] (`cp * ρ` from `fluid_property(T, :water)`)
 # Output
     - `Tin`: Inlet fluid temperature [°C]
 """

@@ -60,7 +60,7 @@ Tin  = inlet_temperature(Tf, Q, V, Cf)
 !!! warning "Use the volumetric heat capacity here"
     ``C_f`` in these formulas is the **volumetric** specific heat ``C_f = c_f\,\rho_f`` [J/m³·K],
     *not* the mass-specific ``c_f`` [J/kg·K] used by `resistance_ULoop_effective`. Compute it as
-    `Cf = water_cp(T) * water_ρ(T)`.
+    `Cf = cf * ρf`, with `cf, ρf` from `fluid_property(T, :water)`.
 
 ## Short-term outlet transfer function
 

@@ -48,7 +48,7 @@ exchanger applications.
     - `V`: Fluid flow rate [m³/s]
 """
 function GHE()
-    # Fluid properties (water_k/cp/ρ/μ) come from BoreholeResistance, re-exported by GHE.
+    # Fluid properties come from BoreholeResistance.fluid_property, re-exported by GHE.
     t = exp10.(range(log10(60.0), log10(3600 * 24 * 365 * 100), length = 500)) # Time (log) [s]
     H = 150.0                       # Borehole depth [m]
     D = 2.0                         # Borehole buried depth [m]
@@ -60,16 +60,15 @@ function GHE()
     ks = 3.0                        # Ground thermal conductivity [W/mK]
     kg = 1.6                        # Grout thermal conductivity [W/mK]
     kp = 0.4                        # Pipe thermal conductivity [W/mK]
-    kf = water_k(T0)                # Fluid thermal conductivity [W/mK]
+    kf, cf, ρf, μf = fluid_property(T0, :water) # Fluid thermal conductivity, specific heat,
+                                        # density, dynamic viscosity [W/mK, J/kgK, kg/m³, Pa·s]
     Cs = 2.11e6                     # Ground volumetric specific heat [J/m³K]
     Cg = 2.25e6                     # Grout volumetric specific heat [J/m³K]
     Cp = 1.9e6                      # Pipe volumetric specific heat [J/m³K]
-    Cf = water_cp(T0) * water_ρ(T0) # Fluid volumetric specific heat [J/m³K]
+    Cf = cf * ρf                    # Fluid volumetric specific heat [J/m³K]
     ρs = 1000.0                     # Ground density [kg/m³]
     ρg = 1000.0                     # Grout density [kg/m³]
     ρp = 1000.0                     # Pipe density [kg/m³]
-    ρf = water_ρ(T0)                # Fluid density [kg/m³]
-    μf = water_μ(T0)                # Fluid dynamic viscosity [Pa.s or kg/m/s]
     vD = 1e-7                       # Darcy velocity in [m/s]
     V = 30/6e4                      # Fluid flow rate in m³/s (30 L/s)
     return t, H, D, s, rb, ro, ri, T0, ks, kg, kp, kf, Cs, Cg, Cp, Cf, ρs, ρg, ρp, ρf, μf, vD, V
