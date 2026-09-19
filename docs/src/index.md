@@ -48,7 +48,7 @@ On top of the two upstream packages, `GroundHeatExchanger.jl` provides:
 
 ## Installation
 
-`GroundHeatExchanger.jl` is registered in the General registry, along with its siblings
+`GroundHeatExchanger.jl` is registered in the General registry, along with its dependencies
 `BoreholeResistance.jl` and `GroundResponse.jl`, so they all resolve automatically:
 
 ```julia
@@ -118,7 +118,7 @@ Tin  = inlet_temperature(Tf, Q, V, Cf)
     the density ``\rho_f`` separately, while [`outlet_temperature`](@ref) and
     [`inlet_temperature`](@ref) take the **volumetric** specific heat
     ``C_f = c_f\,\rho_f`` [J/m³·K]. Compute `Cf = cf * ρf` (from `fluid_property(T, :water)`)
-    explicitly when crossing that boundary.
+    explicitly.
 
 ## Re-exported APIs
 
