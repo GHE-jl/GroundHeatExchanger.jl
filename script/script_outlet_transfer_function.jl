@@ -83,8 +83,8 @@ g_out = outlet_transfer_function(t, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V
 t_st, g_st = short_term_response(PublishedANN(), collect(dt:dt:tf), rb, ri, ro, H, s, V̇, ks, Cs,
     kg, Cg, kp, Cp, Cf)
 # Raw long-term branch (no splice/shift), on the same per-borehole basis as the combined curve:
-# the field ground response is normalised to 1 W/m of *total* field heat rate, so scale by nb.
-g_lt = (nb .* ground_response(t, rb, xy, m; interp = true) .+ Rbₑ) .* (V̇ * Cf / H)
+# the field ground response is normalised to 1 W/m on every borehole.
+g_lt = (ground_response(t, rb, xy, m; interp = true) .+ Rbₑ) .* (V̇ * Cf / H)
 
 tc = 7 * 24 * 3600.0
 

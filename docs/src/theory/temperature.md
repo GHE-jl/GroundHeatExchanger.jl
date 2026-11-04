@@ -77,12 +77,11 @@ outlet transfer function through the effective borehole resistance ``R_b^*`` and
 the short-term curve at the model's contact time (7 or 21 days):
 
 ```math
-\bar g = \left(N_b\,\tilde g + R_b^*\right)\frac{\dot V\,C_f}{H},
+\bar g = \left(\tilde g + R_b^*\right)\frac{\dot V\,C_f}{H},
 ```
 
-where ``N_b`` rescales a borefield's field-average response (normalised by `GroundResponse.jl` to
-1 W/m of *total* field load) back to the per-borehole basis the ANN uses (``N_b = 1`` for a single
-borehole).
+where ``\tilde g`` is, for a borefield, the field-average response normalised by `GroundResponse.jl`
+to 1 W/m on every borehole, the per-borehole basis the ANN uses.
 
 ```julia
 Rbₑ   = resistance_ULoop_effective(V, H, s, rb, ro, ri, ks, kg, kp, kf, cf, ρf, μf)

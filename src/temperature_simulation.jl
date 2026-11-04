@@ -117,10 +117,9 @@ It joins a short-term ANN transfer function to a long-term ground model `m`:
 `m` may be any `AbstractGroundModel`, spatial superposition (`successive_flux`) is applied
 automatically when `xy` describes more than one borehole (in which case the result is the
 field-average outlet transfer function under the equal-inlet-temperature assumption).
-For a borefield, `ground_response` returns the field-average wall response normalised to 1 W/m of
-*total* field heat rate (flux constraint `Σqᵢ = 1`), i.e. `1/nb` of the per-borehole response,
-whereas the short-term ANN transfer function is per single borehole. The `nb` factor above rescales
-the ground response back to a per-borehole basis so both halves join with a matching slope.
+For a borefield, `ground_response` returns the field-average wall response normalised to 1 W/m on
+every borehole, the same per-borehole basis as the short-term ANN transfer function, so both halves
+join with a matching slope.
 The impulse of the outlet transfer function is of 1 °C (as opposed to 1 W/m for the models in
 GroundResponse.jl).
 # Arguments
@@ -162,8 +161,7 @@ function outlet_transfer_function(t::AbstractVector{<:Real}, ks, Cs, kg, Cg, kp,
     g_short = any(short) ? pchip_interpolation(ts_nodes, g_nodes, tv[short]) : Float64[]
     g_st_contact = g_nodes[end]                   # short-term value at tc (== last node)
 
-    nb = size(xy, 1)
-    to_outlet(gw) = (nb .* gw .+ Rbₑ) .* (V̇ * Cf / H)
+    to_outlet(gw) = (gw .+ Rbₑ) .* (V̇ * Cf / H)
     # Prepend tc so the first evaluated value provides the continuity shift.
     tq = vcat(tc, tv[.!short])
     g_long_full = to_outlet(ground_response(tq, rb, xy, m; interp = interp))
