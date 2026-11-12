@@ -11,7 +11,7 @@ the integration layer for a three-package ecosystem:
 ```
 BoreholeResistance.jl          GroundResponse.jl
   fluid_property                ILSModel, FLSModel, ...
-  resistance_ULoop_effective  ground_response, successive_flux
+  resistance_ULoop_effective  ground_response, bc_II
            ↘                            ↙
            GroundHeatExchanger.jl
            convolution (FFT), fluid_temperature, outlet_temperature, inlet_temperature
@@ -139,12 +139,12 @@ state_vec = state_vector(ind, state, length(t))
 
 All models are dispatched through `ground_response(t, rb, xy, m::AbstractGroundModel)`:
 - Single borehole (`size(xy,1) == 1`): direct g-function evaluation at the borehole wall.
-- Borefield: `successive_flux` spatial superposition is applied automatically.
+- Borefield: BC-II spatial superposition (`bc_II`) is applied automatically.
 
 ```julia
 # Borefield spatial superposition
 xy = borefield(:rectangle, 3, 4, 6.0)    # 3×4 rectangular grid, 6 m spacing
-g  = ground_response(t, rb, xy, model)   # successive_flux applied internally
+g  = ground_response(t, rb, xy, model)   # bc_II applied internally
 ```
 
 ## Scripts

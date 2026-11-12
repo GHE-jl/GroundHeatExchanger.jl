@@ -76,7 +76,7 @@ xy = borefield(:rectangle, 4, 3, 5.0)
 
 # Combined outlet transfer function, and its short-/long-term components for context.
 # `interp = true` is the documented correctness requirement for the borefield temporal solver
-# (successive_flux) on a non-uniform, log-spaced `t`.
+# (bc_II) on a non-uniform, log-spaced `t`.
 nb = size(xy, 1)
 g_out = outlet_transfer_function(t, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s, Rbₑ, m;
     xy = xy, interp = true, model = PublishedANN())

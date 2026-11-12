@@ -13,7 +13,7 @@ exchanger under a time-varying load.
 ```
  BoreholeResistance.jl                 GroundResponse.jl
    fluid_property                         ILSModel, FLSModel, …
-   resistance_ULoop_effective        ground_response, successive_flux
+   resistance_ULoop_effective        ground_response, bc_II
               ↘                                  ↙
                    GroundHeatExchanger.jl
    temporal superposition (FFT) · fluid_temperature · outlet/inlet_temperature
@@ -128,7 +128,7 @@ documentation lives in their own sites:
 | From | Re-exported symbols | Documentation |
 |---|---|---|
 | **BoreholeResistance.jl** | `fluid_property`, `Reynolds`, `Prandtl`, `Nusselt`, `resistance_*` | [docs](https://GHE-jl.github.io/BoreholeResistance.jl) |
-| **GroundResponse.jl** | `ILSModel` … `MFLSModel`, `ils` … `mfls`, `ground_response`, `successive_flux`, `bloc_matrix`, `borefield*` | [docs](https://GHE-jl.github.io/GroundResponse.jl) |
+| **GroundResponse.jl** | `ILSModel` … `MFLSModel`, `ils` … `mfls`, `ground_response`, `bc_I`, `bc_II`, `bc_III`, `borefield*` | [docs](https://GHE-jl.github.io/GroundResponse.jl) |
 
 The pages here document only the symbols **defined in** `GroundHeatExchanger.jl`. The g-function
 interface `ground_response` is re-exported from `GroundResponse.jl` (its PCHIP compression is

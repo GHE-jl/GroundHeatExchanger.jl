@@ -104,7 +104,7 @@ end
 
 """
     outlet_transfer_function(t, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb, H, V̇, s, Rbₑ, m;
-                             xy=[0.0 0.0], clamp=true, interp=false, model=DeepANN())
+                             xy=[0.0 0.0], clamp=true, interp=size(xy, 1) > 1, model=DeepANN())
 
 Complete dimensionless transfer function of the borehole-**outlet** fluid temperature (`T_out`,
 i.e. the entering water temperature on the source (ground) side), spanning minutes to decades.
@@ -114,7 +114,7 @@ It joins a short-term ANN transfer function to a long-term ground model `m`:
   2. the long-term is the borehole-wall temperature response of `m` [°C·m/W];
   3. the long-term curve is shifted vertically to meet the short-term curve at the contact
      time, then the two halves are spliced.
-`m` may be any `AbstractGroundModel`, spatial superposition (`successive_flux`) is applied
+`m` may be any `AbstractGroundModel`, spatial superposition (BC-II, `bc_II`) is applied
 automatically when `xy` describes more than one borehole (in which case the result is the
 field-average outlet transfer function under the equal-inlet-temperature assumption).
 For a borefield, `ground_response` returns the field-average wall response normalised to 1 W/m on
@@ -133,7 +133,8 @@ GroundResponse.jl).
     - `xy`: Borehole coordinates (nb × 2) [m] — `[0.0 0.0]` for a single borehole
     - `clamp`: out-of-range handling for the ANN inputs (see `short_term_response`)
     - `interp`: enable GroundResponse's sub-sampling + PCHIP interpolation for the long-term
-      evaluation; `false` evaluates exactly at every `t` (default `false`)
+        evaluation; `false` evaluates exactly at every `t` (default `false` for a single borehole,
+      `true` for a borefield, whose BC-II solver needs a uniform time step)
     - `model`: short-term ANN to join, [`DeepANN`](@ref) (default) or [`PublishedANN`](@ref)
 # Output
     - `g`: Dimensionless outlet transfer function at `t` [-] (add `1` for the inlet transfer
@@ -149,7 +150,7 @@ GroundResponse.jl).
 function outlet_transfer_function(t::AbstractVector{<:Real}, ks, Cs, kg, Cg, kp, Cp, Cf, ri, ro, rb,
     H, V̇, s, Rbₑ, m::AbstractGroundModel;
     xy::AbstractMatrix{<:Real} = reshape([0.0, 0.0], 1, 2), clamp::Bool = true,
-    interp::Bool = false, model::AbstractANN = DeepANN())
+    interp::Bool = size(xy, 1) > 1, model::AbstractANN = DeepANN())
 
     tv = collect(Float64, t)
 

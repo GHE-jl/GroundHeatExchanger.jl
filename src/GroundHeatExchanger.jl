@@ -5,7 +5,7 @@ using PCHIPInterpolation
 using BoreholeResistance
 using GroundResponse: AbstractGroundModel, ILSModel, ICSModel, FLSModel, MILSModel,
     MFLSModel, ground_response, ils, ics, fls, mils, mfls,
-    successive_flux, bloc_matrix, borefield_geometry, borefield, borefield_rectangle,
+    bc_I, bc_II, bc_III, borefield_geometry, borefield, borefield_rectangle,
     borefield_line, borefield_circle, borefield_L, borefield_U, borefield_open_rectangle
 
 # Utilities (pchip_interpolation, GHE, ground_load_profile)
@@ -55,7 +55,7 @@ export AbstractGroundModel
 export ILSModel, ICSModel, FLSModel, MILSModel, MFLSModel
 export ground_response
 export ils, ics, fls, mils, mfls
-export successive_flux, bloc_matrix
+export bc_I, bc_II, bc_III
 export borefield_geometry
 export borefield, borefield_rectangle, borefield_line, borefield_circle,
     borefield_L, borefield_U, borefield_open_rectangle
