@@ -12,7 +12,7 @@ PCHIPInterpolation = "afe20452-48d1-4729-9a8b-50fb251f06cd"
 [compat]
 BoreholeResistance = "1.1"
 DSP = "0.8"
-GroundResponse = "2.2, 2"
+GroundResponse = "2.2"
 PCHIPInterpolation = "0.2"
 julia = "1.11"
 
